@@ -203,6 +203,61 @@
         gap: 8px;
       }
 
+      .camera-panel {
+        position: absolute;
+        z-index: 5;
+        right: 16px;
+        top: 154px;
+        width: 226px;
+        padding: 10px;
+        border: 2px solid rgba(23, 33, 38, 0.16);
+        background: var(--panel);
+        box-shadow: 0 16px 46px var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .camera-panel video {
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        display: block;
+        object-fit: cover;
+        transform: scaleX(-1);
+        border: 1px solid rgba(23, 33, 38, 0.14);
+        background: rgba(23, 33, 38, 0.1);
+      }
+
+      .camera-panel p {
+        margin: 8px 0 0;
+        color: #50616a;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .camera-panel strong {
+        color: var(--teal);
+      }
+
+      .charge-meter {
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        bottom: 154px;
+        width: min(520px, calc(100vw - 32px));
+        height: 18px;
+        overflow: hidden;
+        border: 2px solid rgba(23, 33, 38, 0.16);
+        background: rgba(255, 255, 255, 0.7);
+        transform: translateX(-50%);
+      }
+
+      .charge-meter i {
+        display: block;
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--teal), var(--gold));
+        transition: width 0.08s linear;
+      }
+
       .primary,
       .ghost {
         padding: 0 18px;
@@ -249,10 +304,17 @@
       }
 
       .choice-panel button:hover,
+      .choice-panel button.active,
       .primary:hover,
       .ghost:hover,
       .controls button:hover {
         transform: translateY(-1px);
+      }
+
+      .choice-panel button.active {
+        color: white;
+        border-color: transparent;
+        background: var(--gold);
       }
 
       .feedback {
@@ -347,6 +409,17 @@
           display: none;
         }
 
+        .camera-panel {
+          top: auto;
+          right: 12px;
+          bottom: 122px;
+          width: 136px;
+        }
+
+        .camera-panel p {
+          font-size: 10px;
+        }
+
         .choice-grid,
         .rules {
           grid-template-columns: repeat(2, 1fr);
@@ -368,6 +441,7 @@
   <body>
     <main class="app">
       <canvas id="game" aria-label="質因數防衛戰遊戲畫面"></canvas>
+      <video id="cameraFeed" class="hidden" playsinline muted aria-hidden="true"></video>
 
       <section class="topbar" aria-live="polite">
         <div class="brand">
@@ -391,8 +465,17 @@
       <section class="choice-panel hidden" id="choicePanel" role="dialog" aria-label="選擇質因數">
         <h2 id="choiceTitle">選出正確質因數</h2>
         <div class="choice-grid" id="choiceGrid"></div>
-        <p class="hint">也可以按鍵盤 1、2、3、4 作答。</p>
+        <p class="hint" id="choiceHint">體感模式可用另一手指向選項停留作答；也可以按鍵盤 1、2、3、4。</p>
       </section>
+
+      <section class="camera-panel" id="cameraPanel">
+        <video id="cameraPreview" playsinline muted aria-hidden="true"></video>
+        <p><strong id="cameraMode">鍵盤模式</strong><br /><span id="gestureStatus">按「開始練習」後會嘗試啟用鏡頭體感。</span></p>
+      </section>
+
+      <div class="charge-meter hidden" id="chargeMeter" aria-label="聚爆集氣進度">
+        <i id="chargeFill"></i>
+      </div>
 
       <div class="controls">
         <button type="button" data-level="easy">簡單 2-30</button>
@@ -411,16 +494,18 @@
           <h2>合數來襲</h2>
           <p>合數會逼近中央防線。先裂解，再選出正確質因數；質數敵人則直接辨識。題目數字不超過 100，適合國中質數與合數單元練習。</p>
           <div class="rules">
-            <div class="rule"><b>合數</b><span>按 Space 或點「裂解」分解成質因數。</span></div>
-            <div class="rule"><b>質因數</b><span>按 F 開選單，選出標記的質因數。</span></div>
-            <div class="rule"><b>聚爆</b><span>累積 5 次正確可補充，用 Q 清除當前題目。</span></div>
+            <div class="rule"><b>合數</b><span>雙手張開或按 Space，分解成質因數。</span></div>
+            <div class="rule"><b>質因數</b><span>單手握拳或按 F，選出標記的質因數。</span></div>
+            <div class="rule"><b>聚爆</b><span>雙掌相對集氣後向前推出，也可按 Q。</span></div>
           </div>
           <button class="primary" type="button" id="startButton">開始練習</button>
         </div>
       </section>
     </main>
 
-    <script>
+    <script type="module">
+      import { isFist, isOpenHand, palmsFacingEachOther, palmsForward } from "./gesture-core.mjs";
+
       const primeNumbersUpTo100 = [
         2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
         67, 71, 73, 79, 83, 89, 97,
@@ -455,6 +540,35 @@
         rings: [],
         nextSpawnAt: 0,
         lastTime: performance.now(),
+        menuHand: null,
+        hoverChoice: null,
+        hoverSince: 0,
+        chargeStartedAt: 0,
+        chargeProgress: 0,
+        burstArmed: false,
+      };
+
+      const gestures = {
+        cameraReady: false,
+        tracking: false,
+        leftOpen: false,
+        rightOpen: false,
+        leftFist: false,
+        rightFist: false,
+        leftCursor: null,
+        rightCursor: null,
+        palmsFacingEachOther: false,
+        palmsForward: false,
+        leftHand: [],
+        rightHand: [],
+        previousLeftOpen: false,
+        previousRightOpen: false,
+        previousLeftFist: false,
+        previousRightFist: false,
+        videoStream: null,
+        landmarker: null,
+        raf: 0,
+        lastVideoTime: -1,
       };
 
       const canvas = document.querySelector("#game");
@@ -471,6 +585,194 @@
       const choiceGrid = document.querySelector("#choiceGrid");
       const choiceTitle = document.querySelector("#choiceTitle");
       const teacherNote = document.querySelector("#teacherNote");
+      const cameraPreview = document.querySelector("#cameraPreview");
+      const cameraMode = document.querySelector("#cameraMode");
+      const gestureStatus = document.querySelector("#gestureStatus");
+      const chargeMeter = document.querySelector("#chargeMeter");
+      const chargeFill = document.querySelector("#chargeFill");
+
+      async function startCamera() {
+        if (gestures.cameraReady) return true;
+        if (!navigator.mediaDevices?.getUserMedia) {
+          gestureStatus.textContent = "此瀏覽器不支援鏡頭，已保留鍵盤模式。";
+          return false;
+        }
+        try {
+          gestureStatus.textContent = "正在載入 MediaPipe 體感模組...";
+          const [{ FilesetResolver, HandLandmarker }, stream] = await Promise.all([
+            import("./vision_bundle.js"),
+            navigator.mediaDevices.getUserMedia({
+              video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+              audio: false,
+            }),
+          ]);
+          gestures.videoStream = stream;
+          cameraPreview.srcObject = stream;
+          await cameraPreview.play();
+          const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm");
+          gestures.landmarker = await HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+              delegate: "GPU",
+            },
+            runningMode: "VIDEO",
+            numHands: 2,
+            minHandDetectionConfidence: 0.55,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          });
+          gestures.cameraReady = true;
+          cameraMode.textContent = "體感模式";
+          gestureStatus.textContent = "鏡頭已啟用：雙手張開裂解，握拳開選單。";
+          gestures.raf = requestAnimationFrame(readGestures);
+          return true;
+        } catch (error) {
+          console.warn(error);
+          gestures.videoStream?.getTracks().forEach((track) => track.stop());
+          gestures.videoStream = null;
+          gestures.landmarker = null;
+          gestures.cameraReady = false;
+          cameraMode.textContent = "鍵盤模式";
+          gestureStatus.textContent = "鏡頭未啟用，仍可用鍵盤和按鈕操作。";
+          return false;
+        }
+      }
+
+      function readGestures(time) {
+        const video = cameraPreview;
+        const landmarker = gestures.landmarker;
+        if (video.readyState >= 2 && landmarker && video.currentTime !== gestures.lastVideoTime) {
+          gestures.lastVideoTime = video.currentTime;
+          const result = landmarker.detectForVideo(video, time);
+          let leftRaw = [];
+          let rightRaw = [];
+          Object.assign(gestures, {
+            tracking: result.landmarks.length > 0,
+            leftOpen: false,
+            rightOpen: false,
+            leftFist: false,
+            rightFist: false,
+            leftCursor: null,
+            rightCursor: null,
+            leftHand: [],
+            rightHand: [],
+          });
+          result.landmarks.forEach((landmarks, index) => {
+            const hand = result.handedness[index]?.[0]?.categoryName?.toLowerCase();
+            const mirrored = landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z || 0 }));
+            const cursor = { x: 1 - landmarks[8].x, y: landmarks[8].y };
+            if (hand === "left") {
+              leftRaw = landmarks;
+              gestures.leftHand = mirrored;
+              gestures.leftOpen = isOpenHand(landmarks);
+              gestures.leftFist = isFist(landmarks);
+              gestures.leftCursor = cursor;
+            } else if (hand === "right") {
+              rightRaw = landmarks;
+              gestures.rightHand = mirrored;
+              gestures.rightOpen = isOpenHand(landmarks);
+              gestures.rightFist = isFist(landmarks);
+              gestures.rightCursor = cursor;
+            }
+          });
+          const bothTracked = leftRaw.length >= 21 && rightRaw.length >= 21 && !gestures.leftFist && !gestures.rightFist;
+          gestures.palmsFacingEachOther = bothTracked && palmsFacingEachOther(leftRaw, rightRaw);
+          gestures.palmsForward = bothTracked && palmsForward(leftRaw, rightRaw);
+          applyGestureActions(time);
+          updateGestureStatus();
+        }
+        gestures.raf = requestAnimationFrame(readGestures);
+      }
+
+      function applyGestureActions(time) {
+        if (state.phase !== "playing") return;
+        const openedBothHands =
+          gestures.leftOpen &&
+          gestures.rightOpen &&
+          (!gestures.previousLeftOpen || !gestures.previousRightOpen) &&
+          !gestures.palmsFacingEachOther;
+        if (openedBothHands) splitTarget();
+
+        if (!state.choicesOpen && !(gestures.leftFist && gestures.rightFist)) {
+          if (gestures.leftFist && !gestures.previousLeftFist && !gestures.rightFist) openChoices("left");
+          if (gestures.rightFist && !gestures.previousRightFist && !gestures.leftFist) openChoices("right");
+        }
+
+        if (state.choicesOpen) trackGestureChoice(time);
+        handleGestureBurst(time);
+        gestures.previousLeftOpen = gestures.leftOpen;
+        gestures.previousRightOpen = gestures.rightOpen;
+        gestures.previousLeftFist = gestures.leftFist;
+        gestures.previousRightFist = gestures.rightFist;
+      }
+
+      function trackGestureChoice(time) {
+        const cursor = state.menuHand === "left" ? gestures.rightCursor : gestures.leftCursor;
+        if (!cursor) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          return;
+        }
+        const element = document
+          .elementFromPoint(cursor.x * window.innerWidth, cursor.y * window.innerHeight)
+          ?.closest("[data-choice]");
+        const value = element ? Number(element.dataset.choice) : null;
+        if (!value) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          choiceGrid.querySelectorAll("button").forEach((button) => button.classList.remove("active"));
+          return;
+        }
+        if (state.hoverChoice !== value) {
+          state.hoverChoice = value;
+          state.hoverSince = time;
+        }
+        choiceGrid.querySelectorAll("button").forEach((button) => {
+          button.classList.toggle("active", Number(button.dataset.choice) === value);
+        });
+        if (time - state.hoverSince >= 520) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          answer(value);
+        }
+      }
+
+      function handleGestureBurst(time) {
+        if (state.burst <= 0) return;
+        if (gestures.palmsFacingEachOther) {
+          state.chargeStartedAt ||= time;
+          state.chargeProgress = Math.min((time - state.chargeStartedAt) / 2000, 1);
+          state.burstArmed = state.chargeProgress >= 1;
+        } else if (state.burstArmed && gestures.palmsForward) {
+          useBurst();
+          state.chargeStartedAt = 0;
+          state.chargeProgress = 0;
+          state.burstArmed = false;
+        } else if (state.chargeStartedAt && time - state.chargeStartedAt > 260) {
+          state.chargeStartedAt = 0;
+          state.chargeProgress = 0;
+          state.burstArmed = false;
+        }
+        chargeMeter.classList.toggle("hidden", state.chargeProgress <= 0);
+        chargeFill.style.width = `${state.chargeProgress * 100}%`;
+      }
+
+      function updateGestureStatus() {
+        if (!gestures.cameraReady) return;
+        if (!gestures.tracking) {
+          gestureStatus.textContent = "等待手部進入鏡頭。";
+        } else if (gestures.palmsFacingEachOther) {
+          gestureStatus.textContent = state.burstArmed ? "聚爆完成，雙掌向前推出。" : "聚爆集氣中。";
+        } else if (state.choicesOpen) {
+          gestureStatus.textContent = "用另一手指向答案，停留半秒作答。";
+        } else if (gestures.leftFist || gestures.rightFist) {
+          gestureStatus.textContent = "偵測到握拳：開啟選單。";
+        } else if (gestures.leftOpen && gestures.rightOpen) {
+          gestureStatus.textContent = "偵測到雙手張開：裂解合數。";
+        } else {
+          gestureStatus.textContent = "體感待命中。";
+        }
+      }
 
       function isPrime(number) {
         if (!Number.isInteger(number) || number < 2) return false;
@@ -519,7 +821,8 @@
         return factorize(number).join(" × ");
       }
 
-      function startGame() {
+      async function startGame() {
+        await startCamera();
         Object.assign(state, {
           phase: "playing",
           score: 0,
@@ -529,6 +832,12 @@
           burst: 3,
           target: null,
           choicesOpen: false,
+          menuHand: null,
+          hoverChoice: null,
+          hoverSince: 0,
+          chargeStartedAt: 0,
+          chargeProgress: 0,
+          burstArmed: false,
           particles: [],
           rings: [],
           nextSpawnAt: performance.now() + 300,
@@ -581,7 +890,7 @@
         showFeedback("合數裂解", `${target.number} = ${formatFactors(target.number)}`, 2100);
       }
 
-      function openChoices() {
+      function openChoices(menuHand = "left") {
         const target = state.target;
         if (!target || state.choicesOpen) return;
         const correct = getCorrectAnswer(target);
@@ -590,12 +899,16 @@
           return;
         }
         state.choicesOpen = true;
+        state.menuHand = menuHand;
+        state.hoverChoice = null;
+        state.hoverSince = 0;
         choiceTitle.textContent = target.kind === "prime" ? "這個數是不是質數？選出它" : "選出金色標記的質因數";
         choiceGrid.replaceChildren();
         makeChoices(correct, 4, target.id).forEach((choice, index) => {
           const button = document.createElement("button");
           button.type = "button";
           button.textContent = choice;
+          button.dataset.choice = String(choice);
           button.addEventListener("click", () => answer(choice));
           button.setAttribute("aria-label", `選項 ${index + 1}，${choice}`);
           choiceGrid.append(button);
@@ -605,6 +918,9 @@
 
       function closeChoices() {
         state.choicesOpen = false;
+        state.menuHand = null;
+        state.hoverChoice = null;
+        state.hoverSince = 0;
         choicePanel.classList.add("hidden");
       }
 
