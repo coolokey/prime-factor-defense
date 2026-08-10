@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { isFist, isOpenHand } from "./gesture-core.mjs";
 
 function makeHand(open) {
@@ -26,7 +26,12 @@ test("detects open hand and fist gestures", () => {
 });
 
 test("site contains camera gesture mode", () => {
-  const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+  const latest = readdirSync(new URL(".", import.meta.url))
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  assert.ok(latest);
+  const html = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
   assert.match(html, /startCamera/i);
   assert.match(html, /HandLandmarker|MediaPipe/i);
   assert.match(html, /體感|鏡頭/);
