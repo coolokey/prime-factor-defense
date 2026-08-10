@@ -1,4 +1,5 @@
-const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0));
+// Keep the same 2D hand-distance rule used by the original game.
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 export function isOpenHand(landmarks) {
   if (!Array.isArray(landmarks) || landmarks.length < 21) return false;

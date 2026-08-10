@@ -25,6 +25,13 @@ test("detects open hand and fist gestures", () => {
   assert.equal(isOpenHand(makeHand(false)), false);
 });
 
+test("matches the original site's 2D open-hand rule when depth varies", () => {
+  const hand = makeHand(true);
+  for (const joint of [6, 10, 14, 18]) hand[joint].z = 1.2;
+
+  assert.equal(isOpenHand(hand), true);
+});
+
 test("site contains camera gesture mode", () => {
   const latest = readdirSync(new URL(".", import.meta.url))
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
