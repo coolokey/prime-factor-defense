@@ -43,3 +43,18 @@ test("site contains camera gesture mode", () => {
   assert.match(html, /HandLandmarker|MediaPipe/i);
   assert.match(html, /體感|鏡頭/);
 });
+
+test("latest game uses the aurora math lab gesture palette", () => {
+  const latest = readdirSync(new URL(".", import.meta.url))
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const html = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(html, /#39D7E7/i);
+  assert.match(html, /#FFD166/i);
+  assert.match(html, /#B9E27A/i);
+  assert.match(html, /#F06478/i);
+  assert.match(html, /function drawHandSkeleton/);
+  assert.match(html, /drawHands\(w, h/);
+});

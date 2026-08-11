@@ -7,7 +7,7 @@ test("publishes the playable game as a dated html file", () => {
   const datedGames = files.filter((file) =>
     /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file),
   );
-  assert.ok(datedGames.length >= 2, "a new dated game file must preserve the previous release");
+  assert.ok(datedGames.length >= 3, "a new dated game file must preserve the previous release");
 
   const latest = datedGames.sort().at(-1);
   const index = readFileSync(new URL("./index.html", import.meta.url), "utf8");
