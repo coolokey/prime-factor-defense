@@ -1,0 +1,1583 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>質因數防衛戰</title>
+    <style>
+      :root {
+        --ink: #172126;
+        --paper: #f7f2e8;
+        --panel: rgba(255, 252, 244, 0.9);
+        --teal: #008f9c;
+        --blue: #2f62d0;
+        --red: #d94747;
+        --gold: #d9981f;
+        --green: #247c53;
+        --shadow: rgba(42, 34, 24, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        overflow: hidden;
+        color: var(--ink);
+        font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+        background:
+          linear-gradient(120deg, rgba(0, 143, 156, 0.12), transparent 34%),
+          linear-gradient(240deg, rgba(217, 152, 31, 0.16), transparent 36%),
+          var(--paper);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .app {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 560px;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+      .app::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.34;
+        background-image:
+          linear-gradient(rgba(23, 33, 38, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(23, 33, 38, 0.08) 1px, transparent 1px);
+        background-size: 42px 42px;
+        transform: rotate(-2deg) scale(1.08);
+      }
+
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      #handOverlay {
+        z-index: 7;
+        pointer-events: none;
+      }
+
+      .topbar {
+        position: absolute;
+        z-index: 4;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: start;
+        gap: 12px;
+        pointer-events: none;
+      }
+
+      .brand,
+      .stats,
+      .teacher-note,
+      .choice-panel,
+      .overlay,
+      .feedback {
+        border: 2px solid rgba(23, 33, 38, 0.16);
+        background: var(--panel);
+        box-shadow: 0 16px 46px var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .brand {
+        justify-self: start;
+        width: min(360px, 100%);
+        padding: 14px 16px;
+        border-left: 8px solid var(--teal);
+      }
+
+      .brand h1 {
+        margin: 0 0 5px;
+        font-size: clamp(22px, 3vw, 38px);
+        line-height: 1.05;
+      }
+
+      .brand p,
+      .teacher-note,
+      .hint,
+      .feedback p {
+        margin: 0;
+        color: #50616a;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .stats {
+        justify-self: center;
+        display: grid;
+        grid-template-columns: repeat(4, auto);
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .stat {
+        min-width: 76px;
+        padding: 8px 10px;
+        text-align: center;
+        border: 1px solid rgba(23, 33, 38, 0.12);
+        background: rgba(255, 255, 255, 0.54);
+      }
+
+      .stat span {
+        display: block;
+        color: #62727b;
+        font-size: 11px;
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 2px;
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .teacher-note {
+        justify-self: end;
+        max-width: 330px;
+        padding: 12px 14px;
+        border-right: 8px solid var(--gold);
+      }
+
+      .controls {
+        position: absolute;
+        z-index: 5;
+        left: 16px;
+        bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .controls button,
+      .primary,
+      .ghost,
+      .choice-panel button {
+        min-height: 42px;
+        border: 2px solid rgba(23, 33, 38, 0.14);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.82);
+        cursor: pointer;
+        box-shadow: 0 8px 22px rgba(42, 34, 24, 0.12);
+      }
+
+      .controls button {
+        padding: 0 13px;
+      }
+
+      .controls button.active {
+        color: white;
+        border-color: transparent;
+        background: var(--teal);
+      }
+
+      .controls button:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+
+      .actionbar {
+        position: absolute;
+        z-index: 5;
+        right: 16px;
+        bottom: 16px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .camera-panel {
+        position: absolute;
+        z-index: 5;
+        right: 16px;
+        top: 154px;
+        width: 226px;
+        padding: 10px;
+        border: 2px solid rgba(23, 33, 38, 0.16);
+        background: var(--panel);
+        box-shadow: 0 16px 46px var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .camera-panel video {
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        display: block;
+        object-fit: cover;
+        transform: scaleX(-1);
+        border: 1px solid rgba(23, 33, 38, 0.14);
+        background: rgba(23, 33, 38, 0.1);
+      }
+
+      .camera-panel p {
+        margin: 8px 0 0;
+        color: #50616a;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .camera-panel strong {
+        color: var(--teal);
+      }
+
+      .charge-meter {
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        bottom: 154px;
+        width: min(520px, calc(100vw - 32px));
+        height: 18px;
+        overflow: hidden;
+        border: 2px solid rgba(23, 33, 38, 0.16);
+        background: rgba(255, 255, 255, 0.7);
+        transform: translateX(-50%);
+      }
+
+      .charge-meter i {
+        display: block;
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--teal), var(--gold));
+        transition: width 0.08s linear;
+      }
+
+      .primary,
+      .ghost {
+        padding: 0 18px;
+        font-weight: 700;
+      }
+
+      .primary {
+        color: white;
+        border-color: transparent;
+        background: var(--blue);
+      }
+
+      .ghost.warn {
+        color: white;
+        border-color: transparent;
+        background: var(--red);
+      }
+
+      .choice-panel {
+        position: absolute;
+        z-index: 6;
+        left: 50%;
+        bottom: 86px;
+        width: min(460px, calc(100vw - 28px));
+        padding: 14px;
+        transform: translateX(-50%);
+      }
+
+      .choice-panel h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      .choice-panel button {
+        min-height: 58px;
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      .choice-panel button:hover,
+      .choice-panel button.active,
+      .primary:hover,
+      .ghost:hover,
+      .controls button:hover {
+        transform: translateY(-1px);
+      }
+
+      .choice-panel button.active {
+        color: white;
+        border-color: transparent;
+        background: var(--gold);
+      }
+
+      .feedback {
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        top: 132px;
+        width: min(560px, calc(100vw - 32px));
+        padding: 12px 16px;
+        text-align: center;
+        transform: translateX(-50%);
+      }
+
+      .feedback strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 18px;
+      }
+
+      .overlay {
+        position: absolute;
+        z-index: 8;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.74), transparent 38%),
+          rgba(247, 242, 232, 0.74);
+      }
+
+      .intro-card {
+        width: min(760px, 100%);
+        text-align: center;
+      }
+
+      .intro-card h2 {
+        margin: 0;
+        font-size: clamp(38px, 7vw, 76px);
+        line-height: 1;
+      }
+
+      .intro-card p {
+        max-width: 620px;
+        margin: 16px auto 24px;
+        color: #50616a;
+        line-height: 1.8;
+      }
+
+      .rules {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 0 auto 24px;
+      }
+
+      .rule {
+        padding: 14px;
+        border: 2px solid rgba(23, 33, 38, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .rule b {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 760px) {
+        .app {
+          min-height: 620px;
+        }
+
+        .topbar {
+          grid-template-columns: 1fr;
+        }
+
+        .brand,
+        .stats,
+        .teacher-note {
+          justify-self: stretch;
+        }
+
+        .stats {
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        .teacher-note {
+          display: none;
+        }
+
+        .camera-panel {
+          top: auto;
+          right: 12px;
+          bottom: 122px;
+          width: 136px;
+        }
+
+        .camera-panel p {
+          font-size: 10px;
+        }
+
+        .choice-grid,
+        .rules {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .actionbar,
+        .controls {
+          left: 12px;
+          right: 12px;
+          justify-content: center;
+        }
+
+        .controls {
+          bottom: 68px;
+        }
+      }
+      /* Aurora Math Lab: each color has one stable gameplay meaning. */
+      :root {
+        --ink: #e9f7f7;
+        --paper: #061116;
+        --panel: rgba(8, 24, 30, 0.88);
+        --teal: #39d7e7;
+        --blue: #39d7e7;
+        --red: #f06478;
+        --gold: #ffd166;
+        --green: #b9e27a;
+        --shadow: rgba(0, 0, 0, 0.42);
+      }
+
+      body { background: radial-gradient(circle at 18% 16%, rgba(57, 215, 231, 0.16), transparent 30%), radial-gradient(circle at 82% 18%, rgba(255, 209, 102, 0.12), transparent 28%), var(--paper); }
+      .app::before { opacity: 0.42; background-image: linear-gradient(rgba(143, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(143, 247, 255, 0.1) 1px, transparent 1px); }
+      .brand, .stats, .teacher-note, .choice-panel, .overlay, .feedback, .camera-panel { border-color: rgba(143, 247, 255, 0.24); }
+      .brand p, .teacher-note, .hint, .feedback p, .camera-panel p, .intro-card p, .stat span { color: #a7c3c8; }
+      .stat, .controls button, .primary, .ghost, .choice-panel button, .rule, .charge-meter { border-color: rgba(143, 247, 255, 0.22); background: rgba(4, 19, 24, 0.84); }
+      .camera-panel video { border-color: rgba(143, 247, 255, 0.3); background: rgba(1, 10, 13, 0.8); }
+      .choice-panel button.active { background: var(--green); color: #061116; }
+      .primary { background: var(--teal); color: #061116; }
+      .ghost.warn { background: var(--red); color: #061116; }
+      .charge-meter { border-color: rgba(255, 209, 102, 0.34); }
+      .overlay { background: radial-gradient(circle at 50% 40%, rgba(57, 215, 231, 0.16), transparent 38%), rgba(2, 14, 18, 0.9); }
+      .health-stat { min-width: 132px; }
+      .hearts { display: flex; justify-content: center; gap: 2px; min-height: 22px; color: rgba(185, 226, 122, 0.22); font-size: 17px; line-height: 1; }
+      .hearts i { font-style: normal; transition: transform 160ms ease, color 160ms ease; }
+      .hearts i.active { color: var(--green); text-shadow: 0 0 10px rgba(185, 226, 122, 0.75); }
+      .settings-entry { position: absolute; z-index: 9; top: 16px; right: 16px; min-height: 40px; padding: 0 14px; border: 2px solid rgba(143, 247, 255, 0.32); color: var(--ink); background: rgba(4, 19, 24, 0.82); cursor: pointer; }
+      .settings-panel { position: absolute; z-index: 10; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(2, 14, 18, 0.7); }
+      .settings-panel.hidden { display: none; }
+      .settings-card { width: min(420px, 100%); padding: 20px; border: 2px solid rgba(143, 247, 255, 0.35); background: rgba(6, 24, 30, 0.96); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5); }
+      .settings-card h2 { margin: 0 0 16px; font-size: 24px; }
+      .setting-field { display: grid; gap: 8px; margin: 14px 0; color: var(--ink); }
+      .setting-field label { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; }
+      .setting-field input[type="range"] { width: 100%; accent-color: var(--teal); }
+      .setting-field select { min-height: 38px; border: 1px solid rgba(143, 247, 255, 0.35); color: var(--ink); background: #061116; }
+      .setting-toggle { display: flex; align-items: center; gap: 8px; }
+      .settings-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+      .pause-overlay { z-index: 8; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      @media (max-width: 760px) { .settings-entry { top: 12px; right: 12px; } .health-stat { grid-column: span 2; } .hearts { font-size: 15px; } }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <canvas id="game" aria-label="質因數防衛戰遊戲畫面"></canvas>
+      <canvas id="handOverlay" aria-hidden="true"></canvas>
+      <video id="cameraFeed" class="hidden" playsinline muted aria-hidden="true"></video>
+
+      <section class="topbar" aria-live="polite">
+        <div class="brand">
+          <h1>質因數防衛戰</h1>
+          <p>所有題目都在 100 以內。把合數裂解成質因數，守住數學防線。</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>分數</span><strong id="score">0</strong></div>
+          <div class="stat health-stat"><span>生命</span><div id="hearts" aria-label="剩餘生命"></div><strong id="health" class="visually-hidden">10</strong></div>
+          <div class="stat"><span>連擊</span><strong id="combo">0</strong></div>
+          <div class="stat"><span>聚爆</span><strong id="burst">3</strong></div>
+        </div>
+        <p class="teacher-note" id="teacherNote">質數只有 1 和自己兩個正因數；1 不是質數，也不是合數。</p>
+      </section>
+
+      <section class="feedback hidden" id="feedback">
+        <strong id="feedbackTitle"></strong>
+        <p id="feedbackBody"></p>
+      </section>
+
+      <section class="choice-panel hidden" id="choicePanel" role="dialog" aria-label="選擇質因數">
+        <h2 id="choiceTitle">選出正確質因數</h2>
+        <div class="choice-grid" id="choiceGrid"></div>
+        <p class="hint" id="choiceHint">體感模式可用另一手指向選項停留作答；也可以按鍵盤 1、2、3、4。</p>
+      </section>
+
+      <section class="camera-panel" id="cameraPanel">
+        <video id="cameraPreview" playsinline muted aria-hidden="true"></video>
+        <p><strong id="cameraMode">鍵盤模式</strong><br /><span id="gestureStatus">按「開始練習」後會嘗試啟用鏡頭體感。</span></p>
+      </section>
+
+      <div class="charge-meter hidden" id="chargeMeter" aria-label="聚爆集氣進度">
+        <i id="chargeFill"></i>
+      </div>
+
+      <div class="controls">
+        <button type="button" data-level="easy">簡單 2-30</button>
+        <button type="button" data-level="normal" class="active">普通 2-60</button>
+        <button type="button" data-level="challenge">挑戰 2-100</button>
+      </div>
+
+      <div class="actionbar">
+        <button class="ghost" type="button" id="pauseButton">暫停</button>
+        <button class="primary" type="button" id="splitButton">裂解 Space</button>
+        <button class="ghost" type="button" id="menuButton">選因數 F</button>
+        <button class="ghost warn" type="button" id="burstButton">聚爆 Q</button>
+      </div>
+
+      <button class="settings-entry" type="button" id="settingsButton">設定</button>
+
+      <section class="settings-panel hidden" id="settingsPanel" role="dialog" aria-modal="true" aria-label="遊戲設定">
+        <div class="settings-card">
+          <h2>戰局設定</h2>
+          <div class="setting-field">
+            <label for="lifeCount"><span>生命數</span><span id="lifeCountValue">10 條</span></label>
+            <select id="lifeCount"><option value="5">5 條</option><option value="10">10 條</option></select>
+          </div>
+          <div class="setting-field">
+            <label for="sfxVolume"><span>音效音量</span><span id="sfxVolumeValue">80%</span></label>
+            <input id="sfxVolume" type="range" min="0" max="100" value="80" />
+          </div>
+          <label class="setting-field setting-toggle" for="cameraPreviewToggle"><input id="cameraPreviewToggle" type="checkbox" checked /> 顯示鏡頭預覽</label>
+          <div class="settings-actions"><button class="primary" type="button" id="closeSettingsButton">完成</button></div>
+        </div>
+      </section>
+
+      <section class="overlay pause-overlay hidden" id="pauseOverlay" role="dialog" aria-label="遊戲暫停">
+        <div class="intro-card"><h2>戰局暫停</h2><p>數字攻勢已凍結。準備好後再繼續練習。</p><button class="primary" type="button" id="resumeButton">繼續練習</button></div>
+      </section>
+
+      <section class="overlay" id="overlay">
+        <div class="intro-card">
+          <h2>合數來襲</h2>
+          <p>合數會逼近中央防線。先裂解，再選出正確質因數；質數敵人則直接辨識。題目數字不超過 100，適合國中質數與合數單元練習。</p>
+          <div class="rules">
+            <div class="rule"><b>合數</b><span>雙手張開或按 Space，分解成質因數。</span></div>
+            <div class="rule"><b>質因數</b><span>單手握拳或按 F，選出標記的質因數。</span></div>
+            <div class="rule"><b>聚爆</b><span>雙掌相對集氣後向前推出，也可按 Q。</span></div>
+          </div>
+          <button class="primary" type="button" id="startButton">開始練習</button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { isFist, isOpenHand, palmsFacingEachOther, palmsForward } from "./gesture-core.mjs";
+
+      const primeNumbersUpTo100 = [
+        2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+        67, 71, 73, 79, 83, 89, 97,
+      ];
+
+      const AURORA = {
+        leftHand: "#39D7E7",
+        rightHand: "#FFD166",
+        correct: "#B9E27A",
+        danger: "#F06478",
+        ink: "#E9F7F7",
+        board: "rgba(143, 247, 255, 0.22)",
+      };
+
+      const colors = {
+        2: "#2f62d0",
+        3: "#008f9c",
+        5: "#d9981f",
+        7: "#d94747",
+        11: "#247c53",
+        13: "#8a5fbf",
+        17: "#c45f2d",
+        19: "#327c88",
+        default: "#172126",
+      };
+
+      const state = {
+        phase: "intro",
+        level: "normal",
+        score: 0,
+        health: 10,
+        maxHealth: 10,
+        combo: 0,
+        streak: 0,
+        burst: 3,
+        target: null,
+        choicesOpen: false,
+        feedbackUntil: 0,
+        feedbackTitle: "",
+        feedbackBody: "",
+        particles: [],
+        rings: [],
+        nextSpawnAt: 0,
+        lastTime: performance.now(),
+        menuHand: null,
+        hoverChoice: null,
+        hoverSince: 0,
+        chargeStartedAt: 0,
+        chargeProgress: 0,
+        burstArmed: false,
+      };
+
+      const preferences = {
+        sfxVolume: 0.8,
+        maxHealth: 10,
+        showCameraPreview: true,
+      };
+      let audioContext = null;
+
+      const gestures = {
+        cameraReady: false,
+        tracking: false,
+        leftOpen: false,
+        rightOpen: false,
+        leftFist: false,
+        rightFist: false,
+        leftCursor: null,
+        rightCursor: null,
+        palmsFacingEachOther: false,
+        palmsForward: false,
+        leftHand: [],
+        rightHand: [],
+        previousLeftOpen: false,
+        previousRightOpen: false,
+        previousLeftFist: false,
+        previousRightFist: false,
+        videoStream: null,
+        landmarker: null,
+        raf: 0,
+        lastVideoTime: -1,
+      };
+
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const handCanvas = document.querySelector("#handOverlay");
+      const handCtx = handCanvas.getContext("2d");
+      const scoreEl = document.querySelector("#score");
+      const healthEl = document.querySelector("#health");
+      const comboEl = document.querySelector("#combo");
+      const burstEl = document.querySelector("#burst");
+      const overlay = document.querySelector("#overlay");
+      const feedback = document.querySelector("#feedback");
+      const feedbackTitle = document.querySelector("#feedbackTitle");
+      const feedbackBody = document.querySelector("#feedbackBody");
+      const choicePanel = document.querySelector("#choicePanel");
+      const choiceGrid = document.querySelector("#choiceGrid");
+      const choiceTitle = document.querySelector("#choiceTitle");
+      const teacherNote = document.querySelector("#teacherNote");
+      const cameraPreview = document.querySelector("#cameraPreview");
+      const cameraMode = document.querySelector("#cameraMode");
+      const gestureStatus = document.querySelector("#gestureStatus");
+      const chargeMeter = document.querySelector("#chargeMeter");
+      const chargeFill = document.querySelector("#chargeFill");
+      const hearts = document.querySelector("#hearts");
+      const settingsPanel = document.querySelector("#settingsPanel");
+      const lifeCount = document.querySelector("#lifeCount");
+      const lifeCountValue = document.querySelector("#lifeCountValue");
+      const sfxVolume = document.querySelector("#sfxVolume");
+      const sfxVolumeValue = document.querySelector("#sfxVolumeValue");
+      const cameraPreviewToggle = document.querySelector("#cameraPreviewToggle");
+      const pauseOverlay = document.querySelector("#pauseOverlay");
+
+      function loadPreferences() {
+        try {
+          Object.assign(preferences, JSON.parse(localStorage.getItem("prime-factor-defense-settings") || "{}"));
+        } catch {
+          // Keep the defaults when storage is unavailable or malformed.
+        }
+        preferences.sfxVolume = Math.min(1, Math.max(0, Number(preferences.sfxVolume) || 0));
+        preferences.maxHealth = Number(preferences.maxHealth) === 5 ? 5 : 10;
+        preferences.showCameraPreview = preferences.showCameraPreview !== false;
+        state.maxHealth = preferences.maxHealth;
+        state.health = preferences.maxHealth;
+        lifeCount.value = String(preferences.maxHealth);
+        sfxVolume.value = String(Math.round(preferences.sfxVolume * 100));
+        cameraPreviewToggle.checked = preferences.showCameraPreview;
+        updateSettingsUi();
+      }
+
+      function savePreferences() {
+        try {
+          localStorage.setItem("prime-factor-defense-settings", JSON.stringify(preferences));
+        } catch {
+          // The game stays playable when browser storage is unavailable.
+        }
+      }
+
+      function updateSettingsUi() {
+        lifeCountValue.textContent = `${preferences.maxHealth} 條`;
+        sfxVolumeValue.textContent = `${Math.round(preferences.sfxVolume * 100)}%`;
+        cameraPreview.classList.toggle("hidden", !preferences.showCameraPreview);
+      }
+
+      function getAudioContext() {
+        if (!audioContext) {
+          const Context = window.AudioContext || window.webkitAudioContext;
+          if (!Context) return null;
+          audioContext = new Context();
+        }
+        if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+        return audioContext;
+      }
+
+      function playSfx(name) {
+        if (preferences.sfxVolume <= 0) return;
+        const context = getAudioContext();
+        if (!context) return;
+        const sounds = {
+          start: [523, 784, 0.11, "sine"], split: [246, 370, 0.16, "triangle"],
+          menu: [660, 880, 0.08, "sine"], select: [740, 920, 0.08, "sine"],
+          correct: [523, 784, 0.18, "triangle"], wrong: [220, 150, 0.18, "sawtooth"],
+          burst: [130, 65, 0.34, "sawtooth"], hit: [120, 80, 0.22, "square"],
+          gameover: [180, 70, 0.48, "sine"], pause: [392, 294, 0.1, "sine"],
+          cancel: [300, 220, 0.09, "square"], stack: [660, 1046, 0.14, "triangle"],
+        };
+        const [from, to, duration, type] = sounds[name] || sounds.menu;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = context.currentTime;
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(from, start);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, to), start + duration);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, preferences.sfxVolume * 0.13), start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.02);
+      }
+
+      function renderHearts() {
+        hearts.replaceChildren();
+        for (let index = 0; index < state.maxHealth; index += 1) {
+          const heart = document.createElement("i");
+          heart.textContent = "♥";
+          heart.classList.toggle("active", index < state.health);
+          hearts.append(heart);
+        }
+      }
+
+      function setPaused(paused) {
+        if (paused && state.phase !== "playing") return;
+        state.phase = paused ? "paused" : "playing";
+        pauseOverlay.classList.toggle("hidden", !paused);
+        playSfx("pause");
+        syncHud();
+      }
+
+      async function startCamera() {
+        if (gestures.cameraReady) return true;
+        if (!navigator.mediaDevices?.getUserMedia) {
+          gestureStatus.textContent = "此瀏覽器不支援鏡頭，已保留鍵盤模式。";
+          return false;
+        }
+        try {
+          gestureStatus.textContent = "正在載入 MediaPipe 體感模組...";
+          const [{ FilesetResolver, HandLandmarker }, stream] = await Promise.all([
+            import("./vision_bundle.js"),
+            navigator.mediaDevices.getUserMedia({
+              video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+              audio: false,
+            }),
+          ]);
+          gestures.videoStream = stream;
+          cameraPreview.srcObject = stream;
+          await cameraPreview.play();
+          const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm");
+          gestures.landmarker = await HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+              delegate: "GPU",
+            },
+            runningMode: "VIDEO",
+            numHands: 2,
+            minHandDetectionConfidence: 0.55,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          });
+          gestures.cameraReady = true;
+          cameraMode.textContent = "體感模式";
+          gestureStatus.textContent = "鏡頭已啟用：雙手張開裂解，握拳開選單。";
+          gestures.raf = requestAnimationFrame(readGestures);
+          return true;
+        } catch (error) {
+          console.warn(error);
+          gestures.videoStream?.getTracks().forEach((track) => track.stop());
+          gestures.videoStream = null;
+          gestures.landmarker = null;
+          gestures.cameraReady = false;
+          cameraMode.textContent = "鍵盤模式";
+          gestureStatus.textContent = "鏡頭未啟用，仍可用鍵盤和按鈕操作。";
+          return false;
+        }
+      }
+
+      function readGestures(time) {
+        const video = cameraPreview;
+        const landmarker = gestures.landmarker;
+        if (video.readyState >= 2 && landmarker && video.currentTime !== gestures.lastVideoTime) {
+          gestures.lastVideoTime = video.currentTime;
+          const result = landmarker.detectForVideo(video, time);
+          let leftRaw = [];
+          let rightRaw = [];
+          Object.assign(gestures, {
+            tracking: result.landmarks.length > 0,
+            leftOpen: false,
+            rightOpen: false,
+            leftFist: false,
+            rightFist: false,
+            leftCursor: null,
+            rightCursor: null,
+            leftHand: [],
+            rightHand: [],
+          });
+          result.landmarks.forEach((landmarks, index) => {
+            const hand = result.handedness[index]?.[0]?.categoryName?.toLowerCase();
+            const mirrored = landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z || 0 }));
+            const cursor = { x: 1 - landmarks[8].x, y: landmarks[8].y };
+            if (hand === "left") {
+              leftRaw = landmarks;
+              gestures.leftHand = mirrored;
+              gestures.leftOpen = isOpenHand(landmarks);
+              gestures.leftFist = isFist(landmarks);
+              gestures.leftCursor = cursor;
+            } else if (hand === "right") {
+              rightRaw = landmarks;
+              gestures.rightHand = mirrored;
+              gestures.rightOpen = isOpenHand(landmarks);
+              gestures.rightFist = isFist(landmarks);
+              gestures.rightCursor = cursor;
+            }
+          });
+          const bothTracked = leftRaw.length >= 21 && rightRaw.length >= 21 && !gestures.leftFist && !gestures.rightFist;
+          gestures.palmsFacingEachOther = bothTracked && palmsFacingEachOther(leftRaw, rightRaw);
+          gestures.palmsForward = bothTracked && palmsForward(leftRaw, rightRaw);
+          applyGestureActions(time);
+          updateGestureStatus();
+        }
+        gestures.raf = requestAnimationFrame(readGestures);
+      }
+
+      function applyGestureActions(time) {
+        if (state.phase !== "playing") return;
+        const openedBothHands =
+          gestures.leftOpen &&
+          gestures.rightOpen &&
+          (!gestures.previousLeftOpen || !gestures.previousRightOpen) &&
+          !gestures.palmsFacingEachOther;
+        if (openedBothHands) splitTarget();
+
+        if (!state.choicesOpen && !(gestures.leftFist && gestures.rightFist)) {
+          if (gestures.leftFist && !gestures.previousLeftFist && !gestures.rightFist) openChoices("left");
+          if (gestures.rightFist && !gestures.previousRightFist && !gestures.leftFist) openChoices("right");
+        }
+
+        if (state.choicesOpen) trackGestureChoice(time);
+        handleGestureBurst(time);
+        gestures.previousLeftOpen = gestures.leftOpen;
+        gestures.previousRightOpen = gestures.rightOpen;
+        gestures.previousLeftFist = gestures.leftFist;
+        gestures.previousRightFist = gestures.rightFist;
+      }
+
+      function trackGestureChoice(time) {
+        const cursor = state.menuHand === "left" ? gestures.rightCursor : gestures.leftCursor;
+        if (!cursor) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          return;
+        }
+        const element = document
+          .elementFromPoint(cursor.x * window.innerWidth, cursor.y * window.innerHeight)
+          ?.closest("[data-choice]");
+        const value = element ? Number(element.dataset.choice) : null;
+        if (!value) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          choiceGrid.querySelectorAll("button").forEach((button) => button.classList.remove("active"));
+          return;
+        }
+        if (state.hoverChoice !== value) {
+          state.hoverChoice = value;
+          state.hoverSince = time;
+          playSfx("select");
+        }
+        choiceGrid.querySelectorAll("button").forEach((button) => {
+          button.classList.toggle("active", Number(button.dataset.choice) === value);
+        });
+        if (time - state.hoverSince >= 520) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          answer(value);
+        }
+      }
+
+      function handleGestureBurst(time) {
+        if (state.burst <= 0) return;
+        if (gestures.palmsFacingEachOther) {
+          state.chargeStartedAt ||= time;
+          state.chargeProgress = Math.min((time - state.chargeStartedAt) / 2000, 1);
+          state.burstArmed = state.chargeProgress >= 1;
+        } else if (state.burstArmed && gestures.palmsForward) {
+          useBurst();
+          state.chargeStartedAt = 0;
+          state.chargeProgress = 0;
+          state.burstArmed = false;
+        } else if (state.chargeStartedAt && time - state.chargeStartedAt > 260) {
+          state.chargeStartedAt = 0;
+          state.chargeProgress = 0;
+          state.burstArmed = false;
+        }
+        chargeMeter.classList.toggle("hidden", state.chargeProgress <= 0);
+        chargeFill.style.width = `${state.chargeProgress * 100}%`;
+      }
+
+      function updateGestureStatus() {
+        if (!gestures.cameraReady) return;
+        if (!gestures.tracking) {
+          gestureStatus.textContent = "等待手部進入鏡頭。";
+        } else if (gestures.palmsFacingEachOther) {
+          gestureStatus.textContent = state.burstArmed ? "聚爆完成，雙掌向前推出。" : "聚爆集氣中。";
+        } else if (state.choicesOpen) {
+          gestureStatus.textContent = "用另一手指向答案，停留半秒作答。";
+        } else if (gestures.leftFist || gestures.rightFist) {
+          gestureStatus.textContent = "偵測到握拳：開啟選單。";
+        } else if (gestures.leftOpen && gestures.rightOpen) {
+          gestureStatus.textContent = "偵測到雙手張開：裂解合數。";
+        } else {
+          gestureStatus.textContent = "體感待命中。";
+        }
+      }
+
+      function isPrime(number) {
+        if (!Number.isInteger(number) || number < 2) return false;
+        for (let divisor = 2; divisor * divisor <= number; divisor += 1) {
+          if (number % divisor === 0) return false;
+        }
+        return true;
+      }
+
+      function factorize(number) {
+        const factors = [];
+        let remainder = number;
+        for (let divisor = 2; divisor <= remainder; divisor += 1) {
+          while (remainder % divisor === 0) {
+            factors.push(divisor);
+            remainder /= divisor;
+          }
+        }
+        return factors;
+      }
+
+      function getDifficultyPool(level) {
+        const max = level === "easy" ? 30 : level === "challenge" ? 100 : 60;
+        return Array.from({ length: max - 1 }, (_, index) => index + 2);
+      }
+
+      function seededRank(seed, value) {
+        let hash = 2166136261;
+        const text = `${seed}:${value}`;
+        for (let index = 0; index < text.length; index += 1) {
+          hash ^= text.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function makeChoices(correct, count, seed) {
+        const pool = primeNumbersUpTo100.filter((number) => number !== correct);
+        pool.sort((a, b) => seededRank(seed, a) - seededRank(seed, b));
+        const result = pool.slice(0, count - 1);
+        result.splice(seededRank(seed, correct) % count, 0, correct);
+        return result;
+      }
+
+      function formatFactors(number) {
+        return factorize(number).join(" × ");
+      }
+
+      async function startGame() {
+        playSfx("start");
+        await startCamera();
+        Object.assign(state, {
+          phase: "playing",
+          score: 0,
+          health: preferences.maxHealth,
+          maxHealth: preferences.maxHealth,
+          combo: 0,
+          streak: 0,
+          burst: 3,
+          target: null,
+          choicesOpen: false,
+          menuHand: null,
+          hoverChoice: null,
+          hoverSince: 0,
+          chargeStartedAt: 0,
+          chargeProgress: 0,
+          burstArmed: false,
+          particles: [],
+          rings: [],
+          nextSpawnAt: performance.now() + 300,
+        });
+        overlay.classList.add("hidden");
+        closeChoices();
+        showFeedback("開始防衛", "看到合數先裂解；看到質數或質因數就選出它。", 1600);
+        syncHud();
+      }
+
+      function spawnTarget() {
+        const pool = getDifficultyPool(state.level);
+        const number = pool[Math.floor(Math.random() * pool.length)];
+        state.target = {
+          id: Date.now() + Math.random(),
+          kind: isPrime(number) ? "prime" : "composite",
+          number,
+          progress: 0,
+          factors: null,
+          activeFactor: null,
+        };
+        teacherNote.textContent = isPrime(number)
+          ? `${number} 是質數，只有 1 和 ${number} 兩個正因數。`
+          : `${number} 是合數，可以再分解成質因數。`;
+            addRing(AURORA.leftHand, 1);
+      }
+
+      function splitTarget() {
+        const target = state.target;
+        if (!target || target.kind !== "composite") {
+          playSfx("cancel");
+          showFeedback("現在不能裂解", "只有合數可以裂解；質數本身已經是基本數字。", 1500);
+          return;
+        }
+        const factors = factorize(target.number).map((value, index, all) => {
+          const angle = -Math.PI + 0.35 + (index / Math.max(1, all.length - 1)) * (Math.PI - 0.7);
+          return {
+            id: `${target.id}-${index}`,
+            value,
+            x: Math.cos(angle) * 110,
+            y: Math.sin(angle) * 80,
+          };
+        });
+        state.target = {
+          ...target,
+          kind: "factors",
+          factors,
+          activeFactor: factors[Math.floor(Math.random() * factors.length)].id,
+        };
+        playSfx("split");
+        burstParticles(width() / 2, height() * 0.5, AURORA.leftHand, 42);
+        showFeedback("合數裂解", `${target.number} = ${formatFactors(target.number)}`, 2100);
+      }
+
+      function openChoices(menuHand = "left") {
+        const target = state.target;
+        if (!target || state.choicesOpen) return;
+        const correct = getCorrectAnswer(target);
+        if (!correct) {
+          playSfx("cancel");
+          showFeedback("先裂解合數", "合數要先按 Space 裂解，才能選出質因數。", 1500);
+          return;
+        }
+        state.choicesOpen = true;
+        state.menuHand = menuHand;
+        state.hoverChoice = null;
+        state.hoverSince = 0;
+        choiceTitle.textContent = target.kind === "prime" ? "這個數是不是質數？選出它" : "選出金色標記的質因數";
+        choiceGrid.replaceChildren();
+        makeChoices(correct, 4, target.id).forEach((choice, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = choice;
+          button.dataset.choice = String(choice);
+          button.addEventListener("click", () => answer(choice));
+          button.setAttribute("aria-label", `選項 ${index + 1}，${choice}`);
+          choiceGrid.append(button);
+        });
+        choicePanel.classList.remove("hidden");
+        playSfx("menu");
+      }
+
+      function closeChoices() {
+        state.choicesOpen = false;
+        state.menuHand = null;
+        state.hoverChoice = null;
+        state.hoverSince = 0;
+        choicePanel.classList.add("hidden");
+      }
+
+      function getCorrectAnswer(target) {
+        if (target.kind === "prime") return target.number;
+        if (target.kind === "factors") {
+          return target.factors.find((factor) => factor.id === target.activeFactor)?.value;
+        }
+        return null;
+      }
+
+      function answer(choice) {
+        const target = state.target;
+        const correct = target && getCorrectAnswer(target);
+        if (!target || !correct) return;
+        closeChoices();
+        if (choice !== correct) {
+          playSfx("wrong");
+          state.combo = 0;
+          state.streak = 0;
+              addRing(AURORA.danger, 0.8);
+          showFeedback("判斷錯誤", target.kind === "prime"
+            ? `${target.number} 是質數，應選 ${target.number}。`
+            : `${target.number} = ${formatFactors(target.number)}，金色標記是 ${correct}。`, 2200);
+          syncHud();
+          return;
+        }
+        const removed = removeCorrectPieces(target, correct);
+        playSfx("correct");
+        state.score += removed;
+        state.combo += 1;
+        state.streak += removed;
+        if (state.streak >= 5) {
+          playSfx("stack");
+          state.burst += 1;
+          state.streak -= 5;
+          showFeedback("聚爆補充", "連續答對累積 5 格，獲得 1 次聚爆。", 1600);
+        } else {
+          showFeedback("答對了", target.kind === "prime" ? `${target.number} 是質數。` : `消除了所有 ${correct}。`, 1200);
+        }
+            addRing(AURORA.correct, 1);
+        syncHud();
+      }
+
+      function removeCorrectPieces(target, correct) {
+        if (target.kind === "prime") {
+          state.target = null;
+          state.nextSpawnAt = performance.now() + 360;
+              burstParticles(width() / 2, height() * 0.5, AURORA.correct, 34);
+          return 1;
+        }
+        const kept = target.factors.filter((factor) => factor.value !== correct);
+        const removed = target.factors.length - kept.length;
+        if (kept.length === 0) {
+          state.target = null;
+          state.nextSpawnAt = performance.now() + 360;
+        } else {
+          state.target = {
+            ...target,
+            factors: kept,
+            activeFactor: kept[Math.floor(Math.random() * kept.length)].id,
+          };
+        }
+            burstParticles(width() / 2, height() * 0.5, AURORA.correct, 28 + removed * 8);
+        return removed;
+      }
+
+      function useBurst() {
+        if (!state.target || state.burst <= 0) {
+          playSfx("cancel");
+          return;
+        }
+        const target = state.target;
+        state.burst -= 1;
+        state.score += target.kind === "factors" ? target.factors.length : 1;
+        state.combo += 1;
+        state.target = null;
+        state.nextSpawnAt = performance.now() + 560;
+        closeChoices();
+        playSfx("burst");
+            burstParticles(width() / 2, height() * 0.5, AURORA.rightHand, 90);
+            addRing(AURORA.rightHand, 1.35);
+        showFeedback("聚爆釋放", "清除當前題目。記得保留聚爆處理困難數字。", 1500);
+        syncHud();
+      }
+
+      function missTarget() {
+        state.health -= 1;
+        playSfx("hit");
+        state.combo = 0;
+        state.streak = 0;
+        const missed = state.target;
+        state.target = null;
+        state.nextSpawnAt = performance.now() + 520;
+        closeChoices();
+            addRing(AURORA.danger, 1);
+        showFeedback("防線受損", missed && isPrime(missed.number)
+          ? `${missed.number} 是質數。`
+          : `${missed.number} = ${formatFactors(missed.number)}`, 2200);
+        if (state.health <= 0) {
+          playSfx("gameover");
+          state.phase = "gameover";
+          overlay.classList.remove("hidden");
+          overlay.querySelector("h2").textContent = "練習結束";
+          overlay.querySelector("p").textContent = `最後分數 ${state.score}。再挑戰一次，把 100 以內的質數和合數認得更快。`;
+          overlay.querySelector("#startButton").textContent = "重新開始";
+        }
+        syncHud();
+      }
+
+      function showFeedback(title, body, duration) {
+        state.feedbackUntil = performance.now() + duration;
+        state.feedbackTitle = title;
+        state.feedbackBody = body;
+        feedbackTitle.textContent = title;
+        feedbackBody.textContent = body;
+        feedback.classList.remove("hidden");
+      }
+
+      function syncHud() {
+        scoreEl.textContent = state.score;
+        healthEl.textContent = state.health;
+        renderHearts();
+        comboEl.textContent = state.combo;
+        burstEl.textContent = state.burst;
+        document.querySelector("#splitButton").disabled = state.phase !== "playing";
+        document.querySelector("#menuButton").disabled = state.phase !== "playing";
+        document.querySelector("#burstButton").disabled = state.phase !== "playing" || state.burst <= 0;
+        document.querySelector("#pauseButton").disabled = state.phase !== "playing";
+      }
+
+      function width() {
+        return canvas.getBoundingClientRect().width;
+      }
+
+      function height() {
+        return canvas.getBoundingClientRect().height;
+      }
+
+      function addRing(color, scale) {
+        state.rings.push({ x: width() / 2, y: height() * 0.5, life: 1, color, scale });
+      }
+
+      function burstParticles(x, y, color, count) {
+        for (let index = 0; index < count; index += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 60 + Math.random() * 260;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 2 + Math.random() * 5,
+            life: 0.45 + Math.random() * 0.85,
+            maxLife: 1.2,
+            color,
+          });
+        }
+      }
+
+      function draw(time) {
+        resizeCanvas();
+        const delta = Math.min((time - state.lastTime) / 1000, 0.05);
+        state.lastTime = time;
+        update(time, delta);
+        paint(time, delta);
+        requestAnimationFrame(draw);
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const nextWidth = Math.max(1, Math.round(rect.width * ratio));
+        const nextHeight = Math.max(1, Math.round(rect.height * ratio));
+        if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+          canvas.width = nextWidth;
+          canvas.height = nextHeight;
+        }
+        if (handCanvas.width !== nextWidth || handCanvas.height !== nextHeight) {
+          handCanvas.width = nextWidth;
+          handCanvas.height = nextHeight;
+        }
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        handCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function update(time, delta) {
+        if (state.phase === "playing") {
+          if (!state.target && time >= state.nextSpawnAt) spawnTarget();
+          if (state.target) {
+            state.target.progress += (0.075 + Math.min(state.score * 0.004, 0.12)) * delta;
+            if (state.target.progress >= 1) missTarget();
+          }
+        }
+        state.particles.forEach((particle) => {
+          particle.x += particle.vx * delta;
+          particle.y += particle.vy * delta;
+          particle.vx *= 0.986;
+          particle.vy *= 0.986;
+          particle.life -= delta;
+        });
+        state.rings.forEach((ring) => {
+          ring.life -= delta * 0.9;
+        });
+        state.particles = state.particles.filter((particle) => particle.life > 0);
+        state.rings = state.rings.filter((ring) => ring.life > 0);
+        if (state.feedbackUntil && time > state.feedbackUntil) {
+          feedback.classList.add("hidden");
+          state.feedbackUntil = 0;
+        }
+      }
+
+      function paint(time) {
+        const w = width();
+        const h = height();
+        ctx.clearRect(0, 0, w, h);
+        handCtx.clearRect(0, 0, w, h);
+        drawBoard(w, h, time);
+        drawTarget(w, h, time);
+        drawHands(w, h, time);
+        drawParticles();
+      }
+
+      function drawBoard(w, h, time) {
+        const centerX = w / 2;
+        const centerY = h * 0.5;
+        ctx.save();
+        ctx.strokeStyle = "rgba(143, 247, 255, 0.14)";
+        ctx.lineWidth = 2;
+        for (let radius = 90; radius < Math.min(w, h) * 0.62; radius += 58) {
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius + Math.sin(time * 0.001 + radius) * 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = AURORA.board;
+        for (let index = 0; index < 12; index += 1) {
+          const angle = (index / 12) * Math.PI * 2 + time * 0.00008;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(centerX + Math.cos(angle) * w, centerY + Math.sin(angle) * h);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawTarget(w, h, time) {
+        const target = state.target;
+        if (!target) return;
+        const centerX = w / 2;
+        const centerY = h * 0.5;
+        const approachScale = 0.52 + target.progress * 1.95;
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(approachScale, approachScale);
+        if (target.kind === "factors") {
+          target.factors.forEach((factor) => {
+            drawNumberNode(
+              factor.value,
+              factor.x,
+              factor.y,
+              34,
+              factor.id === target.activeFactor,
+              time,
+            );
+          });
+          drawCenterLabel(`${target.number}`);
+        } else {
+          drawNumberNode(target.number, 0, 0, 58, target.kind === "prime", time);
+        }
+        ctx.restore();
+        drawProgress(centerX, centerY, target.progress);
+      }
+
+      function drawNumberNode(number, x, y, radius, active, time) {
+        const color = active ? AURORA.correct : colors[number] || AURORA.danger;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.sin(time * 0.0012 + number) * 0.04);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = active ? 28 : 16;
+        ctx.fillStyle = "rgba(4, 19, 24, 0.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = active ? 5 : 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = AURORA.ink;
+        ctx.font = `800 ${radius * 0.72}px "Microsoft JhengHei", sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(number, 0, 1);
+        if (active) {
+          ctx.strokeStyle = AURORA.correct;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 7]);
+          ctx.beginPath();
+          ctx.arc(0, 0, radius + 12, time * 0.002, time * 0.002 + Math.PI * 1.6);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawCenterLabel(text) {
+        ctx.save();
+        ctx.fillStyle = "rgba(233, 247, 247, 0.82)";
+        ctx.font = '700 18px "Microsoft JhengHei", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 0, 26);
+        ctx.restore();
+      }
+
+      function drawProgress(x, y, progress) {
+        ctx.save();
+        ctx.strokeStyle = progress > 0.75 ? AURORA.danger : AURORA.leftHand;
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(x, y, 168, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawParticles() {
+        state.particles.forEach((particle) => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+          ctx.fillStyle = particle.color;
+          ctx.shadowColor = particle.color;
+          ctx.shadowBlur = 14;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+        state.rings.forEach((ring) => {
+          const fade = Math.max(0, ring.life);
+          ctx.save();
+          ctx.globalAlpha = fade;
+          ctx.strokeStyle = ring.color;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(ring.x, ring.y, (1.05 - fade) * 280 * ring.scale, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
+      function drawHands(w, h, time) {
+        drawHandSkeleton(handCtx, gestures.leftHand, AURORA.leftHand, "左手", w, h, time);
+        drawHandSkeleton(handCtx, gestures.rightHand, AURORA.rightHand, "右手", w, h, time);
+      }
+
+      function drawHandSkeleton(drawing, landmarks, color, label, w, h, time) {
+        if (!Array.isArray(landmarks) || landmarks.length < 21) return;
+        const links = [
+          [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+          [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15],
+          [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17],
+        ];
+        const point = (index) => ({ x: landmarks[index].x * w, y: landmarks[index].y * h });
+        drawing.save();
+        drawing.globalAlpha = 0.82;
+        drawing.strokeStyle = color;
+        drawing.fillStyle = color;
+        drawing.lineWidth = 2.4;
+        drawing.lineCap = "round";
+        drawing.lineJoin = "round";
+        drawing.shadowColor = color;
+        drawing.shadowBlur = 16;
+        links.forEach(([from, to]) => {
+          const a = point(from);
+          const b = point(to);
+          drawing.beginPath();
+          drawing.moveTo(a.x, a.y);
+          drawing.lineTo(b.x, b.y);
+          drawing.stroke();
+        });
+        landmarks.forEach((_, index) => {
+          const p = point(index);
+          drawing.beginPath();
+          drawing.arc(p.x, p.y, index === 0 || index === 9 ? 4.6 : 3.2, 0, Math.PI * 2);
+          drawing.fill();
+        });
+        const wrist = point(0);
+        drawing.globalAlpha = 0.9;
+        drawing.font = '700 13px "Microsoft JhengHei", sans-serif';
+        drawing.fillText(label, wrist.x + 12, wrist.y + Math.sin(time * 0.004) * 3 - 10);
+        drawing.restore();
+      }
+
+      document.querySelector("#startButton").addEventListener("click", startGame);
+      document.querySelector("#splitButton").addEventListener("click", splitTarget);
+      document.querySelector("#menuButton").addEventListener("click", openChoices);
+      document.querySelector("#burstButton").addEventListener("click", useBurst);
+      document.querySelector("#pauseButton").addEventListener("click", () => setPaused(true));
+      document.querySelector("#resumeButton").addEventListener("click", () => setPaused(false));
+      document.querySelector("#settingsButton").addEventListener("click", () => {
+        settingsPanel.classList.remove("hidden");
+        playSfx("menu");
+      });
+      document.querySelector("#closeSettingsButton").addEventListener("click", () => {
+        settingsPanel.classList.add("hidden");
+        playSfx("menu");
+      });
+      lifeCount.addEventListener("change", () => {
+        preferences.maxHealth = Number(lifeCount.value) === 5 ? 5 : 10;
+        state.maxHealth = preferences.maxHealth;
+        state.health = state.phase === "playing" || state.phase === "paused"
+          ? Math.min(state.health, state.maxHealth)
+          : state.maxHealth;
+        updateSettingsUi();
+        savePreferences();
+        syncHud();
+        playSfx("select");
+      });
+      sfxVolume.addEventListener("input", () => {
+        preferences.sfxVolume = Number(sfxVolume.value) / 100;
+        updateSettingsUi();
+        savePreferences();
+        playSfx("menu");
+      });
+      cameraPreviewToggle.addEventListener("change", () => {
+        preferences.showCameraPreview = cameraPreviewToggle.checked;
+        updateSettingsUi();
+        savePreferences();
+        playSfx("select");
+      });
+
+      document.querySelectorAll("[data-level]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-level]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          state.level = button.dataset.level;
+          const label = button.textContent.trim();
+          playSfx("menu");
+          showFeedback("難度已切換", label, 1200);
+        });
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (state.phase === "paused" && event.key === "Escape") {
+          setPaused(false);
+          return;
+        }
+        if (state.phase !== "playing") return;
+        if (event.key === "Escape") {
+          setPaused(true);
+          return;
+        }
+        if (event.code === "Space") {
+          event.preventDefault();
+          splitTarget();
+        }
+        if (event.key.toLowerCase() === "f") openChoices();
+        if (event.key.toLowerCase() === "q") useBurst();
+        const index = Number(event.key) - 1;
+        if (state.choicesOpen && index >= 0 && index < choiceGrid.children.length) {
+          choiceGrid.children[index].click();
+        }
+      });
+
+      loadPreferences();
+      syncHud();
+      requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>
