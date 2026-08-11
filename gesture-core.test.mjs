@@ -58,3 +58,15 @@ test("latest game uses the aurora math lab gesture palette", () => {
   assert.match(html, /function drawHandSkeleton/);
   assert.match(html, /drawHands\(w, h/);
 });
+
+test("hand skeleton overlay stays above the answer choices without blocking them", () => {
+  const latest = readdirSync(new URL(".", import.meta.url))
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const html = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(html, /<canvas id="handOverlay" aria-hidden="true"><\/canvas>/);
+  assert.match(html, /#handOverlay\s*\{[\s\S]*?z-index:\s*7;[\s\S]*?pointer-events:\s*none;/);
+  assert.match(html, /const handCanvas = document\.querySelector\("#handOverlay"\)/);
+});
