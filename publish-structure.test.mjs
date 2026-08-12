@@ -37,3 +37,15 @@ test("latest game carries the Renkai visual and audio skin", () => {
   assert.match(game, /choice-count-5 button:nth-child\(5\)/);
   assert.match(game, /Math\.min\(5, Math\.max\(2, pairs\.length\)\)/);
 });
+
+test("gesture answer selection accepts the first zero-indexed choice", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.doesNotMatch(game, /if \(!value\)/);
+  assert.match(game, /Number\.isNaN\(value\)/);
+});

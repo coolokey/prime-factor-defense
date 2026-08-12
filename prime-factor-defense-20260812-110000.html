@@ -930,8 +930,9 @@
         const element = document
           .elementFromPoint(cursor.x * window.innerWidth, cursor.y * window.innerHeight)
           ?.closest("[data-choice]");
-        const value = element ? Number(element.dataset.choice) : null;
-        if (!value) {
+        const rawChoice = element?.dataset.choice;
+        const value = rawChoice == null ? NaN : Number(rawChoice);
+        if (Number.isNaN(value)) {
           state.hoverChoice = null;
           state.hoverSince = 0;
           choiceGrid.querySelectorAll("button").forEach((button) => button.classList.remove("active"));
