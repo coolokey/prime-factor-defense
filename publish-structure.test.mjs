@@ -29,7 +29,7 @@ test("latest game carries the Renkai visual and audio skin", () => {
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /assets\/renkai\/RENKAI_Logo_2\.png/);
-  assert.match(game, /assets\/renkai\/99_鍊\.png/);
+  assert.match(game, /assets\/renkai\/99_數\.png/);
   assert.match(game, /audio\/bgm\/00_battle_BGM\.mp3/);
   assert.match(game, /audio\/sfx\/02_magic_circle_open\.wav/);
   assert.match(game, /class="burst-ultimate-effect/);
