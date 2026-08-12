@@ -67,13 +67,13 @@ export function palmsFacingEachOther(left, right) {
   const gap = Math.hypot(leftCenter.x - rightCenter.x, leftCenter.y - rightCenter.y);
   return (
     gap > 0.08 &&
-    gap < 0.66 &&
-    dot < -0.34 &&
-    leftNormal.x * rightNormal.x < -0.07 &&
-    Math.abs(leftNormal.x) > 0.28 &&
-    Math.abs(rightNormal.x) > 0.28 &&
-    Math.abs(leftNormal.z) < 0.7 &&
-    Math.abs(rightNormal.z) < 0.7
+    gap < 0.72 &&
+    dot < -0.22 &&
+    leftNormal.x * rightNormal.x < -0.03 &&
+    Math.abs(leftNormal.x) > 0.18 &&
+    Math.abs(rightNormal.x) > 0.18 &&
+    Math.abs(leftNormal.z) < 0.82 &&
+    Math.abs(rightNormal.z) < 0.82
   );
 }
 
@@ -81,5 +81,5 @@ export function palmsForward(left, right) {
   if (!Array.isArray(left) || !Array.isArray(right) || left.length < 21 || right.length < 21) return false;
   const leftNormal = palmNormal(left, "left");
   const rightNormal = palmNormal(right, "right");
-  return Math.abs(leftNormal.z) > 0.68 && Math.abs(rightNormal.z) > 0.68 && leftNormal.z * rightNormal.z > 0.34;
+  return Math.abs(leftNormal.z) > 0.45 && Math.abs(rightNormal.z) > 0.45 && leftNormal.z * rightNormal.z > 0.2;
 }

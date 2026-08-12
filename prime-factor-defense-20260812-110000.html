@@ -574,8 +574,10 @@
         hoverChoice: null,
         hoverSince: 0,
         chargeStartedAt: 0,
+        chargeLostAt: 0,
         chargeProgress: 0,
         burstArmed: false,
+        burstReleaseGraceUntil: 0,
       };
 
       const preferences = {
@@ -958,19 +960,30 @@
         if (gestures.palmsFacingEachOther) {
           if (!state.chargeStartedAt) startLoop("charge");
           state.chargeStartedAt ||= time;
-          state.chargeProgress = Math.min((time - state.chargeStartedAt) / 2000, 1);
+          state.chargeLostAt = 0;
+          state.chargeProgress = Math.min((time - state.chargeStartedAt) / 1200, 1);
           state.burstArmed = state.chargeProgress >= 1;
+          if (state.burstArmed) state.burstReleaseGraceUntil = time + 900;
         } else if (state.burstArmed && gestures.palmsForward) {
           stopLoop("charge");
           useBurst();
-          stopLoop("charge");
           state.chargeStartedAt = 0;
+          state.chargeLostAt = 0;
           state.chargeProgress = 0;
           state.burstArmed = false;
-        } else if (state.chargeStartedAt && time - state.chargeStartedAt > 260) {
-          state.chargeStartedAt = 0;
-          state.chargeProgress = 0;
-          state.burstArmed = false;
+          state.burstReleaseGraceUntil = 0;
+        } else if (state.burstArmed && time <= state.burstReleaseGraceUntil) {
+          state.chargeProgress = 1;
+        } else if (state.chargeStartedAt) {
+          state.chargeLostAt ||= time;
+          if (time - state.chargeLostAt > 520) {
+            stopLoop("charge");
+            state.chargeStartedAt = 0;
+            state.chargeLostAt = 0;
+            state.chargeProgress = 0;
+            state.burstArmed = false;
+            state.burstReleaseGraceUntil = 0;
+          }
         }
         chargeMeter.classList.toggle("hidden", state.chargeProgress <= 0);
         chargeFill.style.width = `${state.chargeProgress * 100}%`;
@@ -982,6 +995,8 @@
           gestureStatus.textContent = "等待手部進入鏡頭。";
         } else if (gestures.palmsFacingEachOther) {
           gestureStatus.textContent = state.burstArmed ? "聚爆完成，雙掌向前推出。" : "聚爆集氣中。";
+        } else if (state.burstArmed) {
+          gestureStatus.textContent = "聚爆完成，雙掌向鏡頭推出。";
         } else if (state.choicesOpen) {
           gestureStatus.textContent = "用另一手指向答案，停留半秒作答。";
         } else if (gestures.leftFist || gestures.rightFist) {
@@ -1047,8 +1062,10 @@
           hoverChoice: null,
           hoverSince: 0,
           chargeStartedAt: 0,
+          chargeLostAt: 0,
           chargeProgress: 0,
           burstArmed: false,
+          burstReleaseGraceUntil: 0,
           particles: [],
           rings: [],
           nextSpawnAt: performance.now() + 300,

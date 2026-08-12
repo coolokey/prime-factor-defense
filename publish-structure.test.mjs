@@ -49,3 +49,20 @@ test("gesture answer selection accepts the first zero-indexed choice", () => {
   assert.doesNotMatch(game, /if \(!value\)/);
   assert.match(game, /Number\.isNaN\(value\)/);
 });
+
+test("burst gesture uses classroom-friendly charge and release timing", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+  const gestureCore = readFileSync(new URL("./gesture-core.mjs", import.meta.url), "utf8");
+
+  assert.match(game, /burstReleaseGraceUntil/);
+  assert.match(game, /\/ 1200/);
+  assert.match(game, /\+ 900/);
+  assert.doesNotMatch(game, /\/ 2000/);
+  assert.doesNotMatch(game, /> 260/);
+  assert.match(gestureCore, /Math\.abs\(leftNormal\.z\) > 0\.45/);
+});
