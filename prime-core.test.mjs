@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  applyFactorPair,
   factorize,
+  getFactorPairs,
   getDifficultyPool,
   isPrime,
   makeChoices,
@@ -39,4 +41,22 @@ test("builds answer choices that include the correct factor and stay prime", () 
   assert.ok(choices.includes(13));
   assert.equal(new Set(choices).size, 4);
   assert.ok(choices.every(isPrime));
+});
+
+test("offers non-trivial factor pairs for a defensive factor tree", () => {
+  assert.deepEqual(getFactorPairs(12), [[2, 6], [3, 4]]);
+  assert.deepEqual(getFactorPairs(13), []);
+  assert.deepEqual(getFactorPairs(72), [[2, 36], [3, 24], [4, 18], [6, 12], [8, 9]]);
+});
+
+test("replaces one composite branch with two continuing branches", () => {
+  const branches = [{ id: "root", value: 12, side: "center" }];
+  const next = applyFactorPair(branches, "root", [3, 4]);
+
+  assert.deepEqual(next, [
+    { id: "root-left", value: 3, side: "left" },
+    { id: "root-right", value: 4, side: "right" },
+  ]);
+  assert.ok(next.some((branch) => isPrime(branch.value)));
+  assert.ok(next.some((branch) => !isPrime(branch.value)));
 });

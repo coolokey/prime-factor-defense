@@ -26,6 +26,28 @@ export function factorize(number) {
   return factors;
 }
 
+export function getFactorPairs(number) {
+  if (!Number.isInteger(number) || number < 2 || number > 100 || isPrime(number)) {
+    return [];
+  }
+  const pairs = [];
+  for (let factor = 2; factor * factor <= number; factor += 1) {
+    if (number % factor === 0) pairs.push([factor, number / factor]);
+  }
+  return pairs;
+}
+
+export function applyFactorPair(branches, branchId, pair) {
+  const [leftValue, rightValue] = pair;
+  return branches.flatMap((branch) => {
+    if (branch.id !== branchId) return [branch];
+    return [
+      { id: `${branch.id}-left`, value: leftValue, side: "left" },
+      { id: `${branch.id}-right`, value: rightValue, side: "right" },
+    ];
+  });
+}
+
 export function getDifficultyPool(level) {
   const maxByLevel = { easy: 30, normal: 60, challenge: 100 };
   const max = maxByLevel[level] ?? maxByLevel.normal;
