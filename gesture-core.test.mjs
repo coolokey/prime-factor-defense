@@ -67,7 +67,8 @@ test("hand skeleton overlay stays above the answer choices without blocking them
   const html = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(html, /<canvas id="handOverlay" aria-hidden="true"><\/canvas>/);
-  assert.match(html, /#handOverlay\s*\{[\s\S]*?z-index:\s*7;[\s\S]*?pointer-events:\s*none;/);
+  assert.match(html, /#handOverlay\s*\{[\s\S]*?z-index:\s*50;[\s\S]*?pointer-events:\s*none;/);
+  assert.match(html, /\.magic-menu\s*\{[\s\S]*?z-index:\s*46;/);
   assert.match(html, /const handCanvas = document\.querySelector\("#handOverlay"\)/);
 });
 
