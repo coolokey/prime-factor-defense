@@ -66,3 +66,21 @@ test("burst gesture uses classroom-friendly charge and release timing", () => {
   assert.doesNotMatch(game, /> 260/);
   assert.match(gestureCore, /Math\.abs\(leftNormal\.z\) > 0\.45/);
 });
+
+test("gesture layer renders glowing skeletons, fingertips, trails, and burst charge aura", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /leftTrail:\s*\[\]/);
+  assert.match(game, /rightTrail:\s*\[\]/);
+  assert.match(game, /function drawPalmGlow/);
+  assert.match(game, /function drawFingerLights/);
+  assert.match(game, /function recordGestureTrail/);
+  assert.match(game, /function drawGestureTrailParticles/);
+  assert.match(game, /function drawBurstChargeAura/);
+  assert.match(game, /globalCompositeOperation = "lighter"/);
+});

@@ -637,6 +637,8 @@
         previousRightOpen: false,
         previousLeftFist: false,
         previousRightFist: false,
+        leftTrail: [],
+        rightTrail: [],
         videoStream: null,
         landmarker: null,
         raf: 0,
@@ -1463,11 +1465,15 @@
       }
 
       function drawHands(w, h, time) {
-        drawHandSkeleton(handCtx, gestures.leftHand, AURORA.leftHand, "左手", w, h, time);
-        drawHandSkeleton(handCtx, gestures.rightHand, AURORA.rightHand, "右手", w, h, time);
+        handCtx.save();
+        handCtx.globalCompositeOperation = "lighter";
+        drawBurstChargeAura(handCtx, w, h, time);
+        drawHandSkeleton(handCtx, gestures.leftHand, AURORA.leftHand, "左手", w, h, time, gestures.leftTrail);
+        drawHandSkeleton(handCtx, gestures.rightHand, AURORA.rightHand, "右手", w, h, time, gestures.rightTrail);
+        handCtx.restore();
       }
 
-      function drawHandSkeleton(drawing, landmarks, color, label, w, h, time) {
+      function drawHandSkeleton(drawing, landmarks, color, label, w, h, time, trail) {
         if (!Array.isArray(landmarks) || landmarks.length < 21) return;
         const links = [
           [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
@@ -1475,7 +1481,11 @@
           [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17],
         ];
         const point = (index) => ({ x: landmarks[index].x * w, y: landmarks[index].y * h });
+        const palm = getPalmPoint(landmarks, w, h);
+        recordGestureTrail(trail, point(8), point(12), palm, time);
         drawing.save();
+        drawGestureTrailParticles(drawing, trail, color, time);
+        drawPalmGlow(drawing, palm, color, time);
         drawing.globalAlpha = 0.82;
         drawing.strokeStyle = color;
         drawing.fillStyle = color;
@@ -1492,16 +1502,134 @@
           drawing.lineTo(b.x, b.y);
           drawing.stroke();
         });
-        landmarks.forEach((_, index) => {
-          const p = point(index);
-          drawing.beginPath();
-          drawing.arc(p.x, p.y, index === 0 || index === 9 ? 4.6 : 3.2, 0, Math.PI * 2);
-          drawing.fill();
-        });
+        drawFingerLights(drawing, landmarks, point, color, time);
         const wrist = point(0);
         drawing.globalAlpha = 0.9;
         drawing.font = '700 13px "Microsoft JhengHei", sans-serif';
         drawing.fillText(label, wrist.x + 12, wrist.y + Math.sin(time * 0.004) * 3 - 10);
+        drawing.restore();
+      }
+
+      function getPalmPoint(landmarks, w, h) {
+        const indexes = [0, 5, 9, 13, 17];
+        return indexes.reduce(
+          (sum, index) => ({ x: sum.x + landmarks[index].x * w / indexes.length, y: sum.y + landmarks[index].y * h / indexes.length }),
+          { x: 0, y: 0 },
+        );
+      }
+
+      function recordGestureTrail(trail, indexTip, middleTip, palm, time) {
+        if (!Array.isArray(trail)) return;
+        const previous = trail.at(-1);
+        const moved = !previous || Math.hypot(indexTip.x - previous.x, indexTip.y - previous.y) > 3.5;
+        if (moved) {
+          trail.push({
+            x: indexTip.x,
+            y: indexTip.y,
+            mx: middleTip.x,
+            my: middleTip.y,
+            px: palm.x,
+            py: palm.y,
+            time,
+          });
+        }
+        while (trail.length > 18 || (trail[0] && time - trail[0].time > 520)) trail.shift();
+      }
+
+      function drawGestureTrailParticles(drawing, trail, color, time) {
+        if (!Array.isArray(trail) || trail.length < 2) return;
+        trail.forEach((spot, index) => {
+          const age = Math.max(0, time - spot.time);
+          const fade = Math.max(0, 1 - age / 520) * ((index + 1) / trail.length);
+          if (fade <= 0) return;
+          drawing.save();
+          drawing.globalAlpha = fade * 0.58;
+          drawing.fillStyle = color;
+          drawing.shadowColor = color;
+          drawing.shadowBlur = 18 + fade * 22;
+          drawing.beginPath();
+          drawing.arc(spot.x, spot.y, 2.2 + fade * 4.2, 0, Math.PI * 2);
+          drawing.fill();
+          drawing.globalAlpha = fade * 0.24;
+          drawing.beginPath();
+          drawing.arc(spot.mx, spot.my, 1.6 + fade * 3.2, 0, Math.PI * 2);
+          drawing.fill();
+          drawing.restore();
+        });
+      }
+
+      function drawPalmGlow(drawing, palm, color, time) {
+        const pulse = 0.72 + Math.sin(time * 0.006) * 0.18;
+        const radius = 26 + pulse * 9 + state.chargeProgress * 20;
+        const gradient = drawing.createRadialGradient(palm.x, palm.y, 0, palm.x, palm.y, radius);
+        gradient.addColorStop(0, "rgba(255, 255, 255, 0.72)");
+        gradient.addColorStop(0.24, color);
+        gradient.addColorStop(1, "rgba(100, 236, 255, 0)");
+        drawing.save();
+        drawing.globalAlpha = 0.36 + state.chargeProgress * 0.42;
+        drawing.fillStyle = gradient;
+        drawing.shadowColor = color;
+        drawing.shadowBlur = 32 + state.chargeProgress * 26;
+        drawing.beginPath();
+        drawing.arc(palm.x, palm.y, radius, 0, Math.PI * 2);
+        drawing.fill();
+        drawing.restore();
+      }
+
+      function drawFingerLights(drawing, landmarks, point, color, time) {
+        const tips = [4, 8, 12, 16, 20];
+        landmarks.forEach((_, index) => {
+          const p = point(index);
+          const isTip = tips.includes(index);
+          drawing.save();
+          drawing.globalAlpha = isTip ? 0.96 : 0.76;
+          drawing.fillStyle = isTip ? "#f8feff" : color;
+          drawing.shadowColor = color;
+          drawing.shadowBlur = isTip ? 26 : 12;
+          drawing.beginPath();
+          drawing.arc(p.x, p.y, isTip ? 5.6 + Math.sin(time * 0.008 + index) * 1.2 : index === 0 || index === 9 ? 4.6 : 3.1, 0, Math.PI * 2);
+          drawing.fill();
+          if (isTip) {
+            drawing.globalAlpha = 0.26;
+            drawing.strokeStyle = color;
+            drawing.lineWidth = 1.6;
+            drawing.beginPath();
+            drawing.arc(p.x, p.y, 12 + Math.sin(time * 0.006 + index) * 2.4, 0, Math.PI * 2);
+            drawing.stroke();
+          }
+          drawing.restore();
+        });
+      }
+
+      function drawBurstChargeAura(drawing, w, h, time) {
+        if (state.chargeProgress <= 0) return;
+        const hands = [gestures.leftHand, gestures.rightHand].filter((hand) => Array.isArray(hand) && hand.length >= 21);
+        if (!hands.length) return;
+        const palms = hands.map((hand) => getPalmPoint(hand, w, h));
+        const center = palms.reduce((sum, palm) => ({ x: sum.x + palm.x / palms.length, y: sum.y + palm.y / palms.length }), { x: 0, y: 0 });
+        const pulse = 1 + Math.sin(time * 0.012) * 0.08;
+        drawing.save();
+        drawing.globalAlpha = 0.22 + state.chargeProgress * 0.48;
+        drawing.strokeStyle = AURORA.gold;
+        drawing.fillStyle = "rgba(255, 227, 148, 0.18)";
+        drawing.shadowColor = AURORA.gold;
+        drawing.shadowBlur = 34 + state.chargeProgress * 42;
+        palms.forEach((palm) => {
+          drawing.beginPath();
+          drawing.arc(palm.x, palm.y, (34 + state.chargeProgress * 42) * pulse, 0, Math.PI * 2);
+          drawing.stroke();
+          drawing.beginPath();
+          drawing.moveTo(palm.x, palm.y);
+          drawing.lineTo(center.x, center.y);
+          drawing.stroke();
+        });
+        drawing.beginPath();
+        drawing.arc(center.x, center.y, 28 + state.chargeProgress * 58, time * 0.004, time * 0.004 + Math.PI * 1.7);
+        drawing.lineWidth = 3 + state.chargeProgress * 4;
+        drawing.stroke();
+        drawing.beginPath();
+        drawing.arc(center.x, center.y, 8 + state.chargeProgress * 22, 0, Math.PI * 2);
+        drawing.fill();
         drawing.restore();
       }
 
