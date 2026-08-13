@@ -105,7 +105,10 @@ test("first level is a prime versus non-prime gate with ten correct answers to p
   assert.match(game, /leftPrimeZone/);
   assert.match(game, /rightNonPrimeZone/);
   assert.match(game, /GATE_HOVER_MS = 700/);
-  assert.match(game, /GATE_RADIUS_RATIO = 0\.12/);
+  assert.match(game, /GATE_CENTER_Y_RATIO = 0\.42/);
+  assert.match(game, /GATE_RADIUS_RATIO = 0\.1/);
+  assert.match(game, /drawPrimeChoiceZone\(w \* 0\.24, gateY/);
+  assert.match(game, /drawPrimeChoiceZone\(w \* 0\.76, gateY/);
   assert.doesNotMatch(game, /gestures\.leftCursor && gestures\.leftCursor\.x < 0\.42/);
   assert.doesNotMatch(game, /gestures\.rightCursor && gestures\.rightCursor\.x > 0\.58/);
   assert.match(game, /聚爆跳過/);

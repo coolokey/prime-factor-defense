@@ -439,7 +439,7 @@
 
       <section class="topbar" aria-live="polite">
         <div class="brand">
-          <img class="brand-logo" src="assets/renkai/SUUKAI_Logo_2.png" alt="數界" />
+          <img class="brand-logo" src="assets/renkai/SUUKAI_Logo_2.png?v=20260813-trad2" alt="數界" />
           <div><h1>質因數防衛戰</h1><p>以數界術式拆解合數，將每個分支鍛造成質數防線。</p></div>
         </div>
         <div class="stats">
@@ -512,7 +512,7 @@
 
       <section class="overlay" id="overlay">
         <div class="intro-card">
-          <img class="intro-logo" src="assets/renkai/SUUKAI_Logo_2.png" alt="數界" />
+          <img class="intro-logo" src="assets/renkai/SUUKAI_Logo_2.png?v=20260813-trad2" alt="數界" />
           <h2>第一關：質數守門</h2>
           <p>100 以內共有 25 個質數。判斷出現的數字是不是質數；1 不是質數，所以本關歸類為非質數。答對 10 題即可進入下一關：合數破陣。</p>
           <div class="rules">
@@ -531,7 +531,8 @@
 
       const PRIME_GATE_GOAL = 10;
       const GATE_HOVER_MS = 700;
-      const GATE_RADIUS_RATIO = 0.12;
+      const GATE_CENTER_Y_RATIO = 0.42;
+      const GATE_RADIUS_RATIO = 0.1;
       const PRIME_REVIEW_TEXT = "100 以內共有 25 個質數：2、3、5、7、11、13、17、19、23、29、31、37、41、43、47、53、59、61、67、71、73、79、83、89、97。";
 
       const AURORA = {
@@ -943,8 +944,8 @@
 
       function trackPrimeGateHands(time) {
         if (!state.target || state.choicesOpen) return;
-        const leftPrimeZone = isCursorInGateZone(gestures.leftCursor, 0.24, 0.5);
-        const rightNonPrimeZone = isCursorInGateZone(gestures.rightCursor, 0.76, 0.5);
+        const leftPrimeZone = isCursorInGateZone(gestures.leftCursor, 0.24, GATE_CENTER_Y_RATIO);
+        const rightNonPrimeZone = isCursorInGateZone(gestures.rightCursor, 0.76, GATE_CENTER_Y_RATIO);
         const choice = leftPrimeZone ? true : rightNonPrimeZone ? false : null;
         if (choice == null) {
           state.gateHover = null;
@@ -1495,9 +1496,10 @@
       function drawPrimeGateTarget(target, w, h, time) {
         const centerX = w / 2;
         const centerY = h * 0.5;
+        const gateY = h * GATE_CENTER_Y_RATIO;
         const approachScale = 0.72 + target.progress * 1.35;
-        drawPrimeChoiceZone(w * 0.24, centerY, "質數", AURORA.leftHand, state.gateHover === true, time);
-        drawPrimeChoiceZone(w * 0.76, centerY, "非質數", AURORA.rightHand, state.gateHover === false, time);
+        drawPrimeChoiceZone(w * 0.24, gateY, "質數", AURORA.leftHand, state.gateHover === true, time);
+        drawPrimeChoiceZone(w * 0.76, gateY, "非質數", AURORA.rightHand, state.gateHover === false, time);
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.scale(approachScale, approachScale);
@@ -1518,20 +1520,20 @@
         ctx.lineWidth = active ? 5 : 3;
         for (let index = 0; index < 3; index += 1) {
           ctx.beginPath();
-          ctx.arc(0, 0, 72 + index * 18 + Math.sin(time * 0.002 + index) * 2, 0, Math.PI * 2);
+          ctx.arc(0, 0, 56 + index * 14 + Math.sin(time * 0.002 + index) * 2, 0, Math.PI * 2);
           ctx.stroke();
         }
         ctx.beginPath();
-        ctx.arc(0, 0, 84, 0, Math.PI * 2);
+        ctx.arc(0, 0, 66, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = color;
-        ctx.font = '900 30px "Microsoft JhengHei", sans-serif';
+        ctx.font = '900 24px "Microsoft JhengHei", sans-serif';
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(label, 0, 0);
         ctx.fillStyle = "rgba(233, 251, 255, 0.78)";
-        ctx.font = '700 13px "Microsoft JhengHei", sans-serif';
-        ctx.fillText(active ? "判定中" : "停留半秒", 0, 38);
+        ctx.font = '700 11px "Microsoft JhengHei", sans-serif';
+        ctx.fillText(active ? "判定中" : "停留半秒", 0, 30);
         ctx.restore();
       }
 
