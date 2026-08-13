@@ -138,6 +138,27 @@ test("latest game reviews all 25 primes before the first challenge starts", () =
   assert.match(game, /trackReviewConfirmGesture/);
 });
 
+test("latest game lets students verify prime and non-prime gesture zones during review", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /#handOverlay \{ z-index: 80/);
+  assert.match(game, /reviewPractice/);
+  assert.match(game, /reviewPrimeZone/);
+  assert.match(game, /reviewNonPrimeZone/);
+  assert.match(game, /reviewPrimeReady/);
+  assert.match(game, /reviewNonPrimeReady/);
+  assert.match(game, /trackReviewPracticeGestures/);
+  assert.match(game, /updateReviewConfirmState/);
+  assert.match(game, /reviewConfirmButton\.disabled = !\(state\.reviewPrimeReady && state\.reviewNonPrimeReady\)/);
+  assert.match(game, /質數感應/);
+  assert.match(game, /非質數感應/);
+});
+
 test("latest game shows remaining lives as red hearts and lost lives as white hearts", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
