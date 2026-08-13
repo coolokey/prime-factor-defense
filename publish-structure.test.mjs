@@ -33,7 +33,7 @@ test("latest game carries the Renkai visual and audio skin", () => {
   assert.match(game, /assets\/renkai\/SUUKAI_Logo_2(?:_[^"]+)?\.png/);
   assert.match(game, /數界視覺版/);
   assert.match(game, /數界術式/);
-  assert.match(game, /intro-logo[\s\S]*clamp\(150px,\s*24vh,\s*260px\)/);
+  assert.match(game, /intro-logo[\s\S]*clamp\(450px,\s*72vh,\s*780px\)/);
   assert.match(game, /assets\/renkai\/99_數\.png/);
   assert.match(game, /audio\/bgm\/00_battle_BGM\.mp3/);
   assert.match(game, /audio\/sfx\/02_magic_circle_open\.wav/);
@@ -116,4 +116,22 @@ test("first level is a prime versus non-prime gate with ten correct answers to p
   assert.doesNotMatch(game, /gestures\.rightCursor && gestures\.rightCursor\.x > 0\.58/);
   assert.match(game, /聚爆跳過/);
   assert.match(game, /進入下一關：合數破陣/);
+});
+
+test("latest game reviews all 25 primes before the first challenge starts", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /reviewOverlay/);
+  assert.match(game, /startPrimeReview/);
+  assert.match(game, /confirmPrimeReview/);
+  assert.match(game, /REVIEW_CONFIRM_HOVER_MS = 800/);
+  assert.match(game, /已複習完畢，開始接受挑戰/);
+  assert.match(game, /2、3、5、7、11、13、17、19、23、29、31、37、41、43、47、53、59、61、67、71、73、79、83、89、97/);
+  assert.match(game, /state\.phase = "review"/);
+  assert.match(game, /trackReviewConfirmGesture/);
 });
