@@ -530,6 +530,8 @@
       import { applyFactorPair, getFactorPairs } from "./prime-core.mjs";
 
       const PRIME_GATE_GOAL = 10;
+      const GATE_HOVER_MS = 700;
+      const GATE_RADIUS_RATIO = 0.12;
       const PRIME_REVIEW_TEXT = "100 以內共有 25 個質數：2、3、5、7、11、13、17、19、23、29、31、37、41、43、47、53、59、61、67、71、73、79、83、89、97。";
 
       const AURORA = {
@@ -941,8 +943,8 @@
 
       function trackPrimeGateHands(time) {
         if (!state.target || state.choicesOpen) return;
-        const leftPrimeZone = gestures.leftCursor && gestures.leftCursor.x < 0.42;
-        const rightNonPrimeZone = gestures.rightCursor && gestures.rightCursor.x > 0.58;
+        const leftPrimeZone = isCursorInGateZone(gestures.leftCursor, 0.24, 0.5);
+        const rightNonPrimeZone = isCursorInGateZone(gestures.rightCursor, 0.76, 0.5);
         const choice = leftPrimeZone ? true : rightNonPrimeZone ? false : null;
         if (choice == null) {
           state.gateHover = null;
@@ -954,11 +956,18 @@
           state.gateHoverSince = time;
           playSfx("select");
         }
-        if (time - state.gateHoverSince >= 520) {
+        if (time - state.gateHoverSince >= GATE_HOVER_MS) {
           state.gateHover = null;
           state.gateHoverSince = 0;
           answerPrimeGate(choice);
         }
+      }
+
+      function isCursorInGateZone(cursor, centerX, centerY) {
+        if (!cursor) return false;
+        const dx = cursor.x - centerX;
+        const dy = cursor.y - centerY;
+        return Math.hypot(dx, dy) <= GATE_RADIUS_RATIO;
       }
 
       function trackGestureChoice(time) {

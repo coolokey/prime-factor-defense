@@ -101,8 +101,13 @@ test("first level is a prime versus non-prime gate with ten correct answers to p
   assert.match(game, /primeGateCorrect/);
   assert.match(game, /answerPrimeGate\(true\)/);
   assert.match(game, /answerPrimeGate\(false\)/);
+  assert.match(game, /isCursorInGateZone/);
   assert.match(game, /leftPrimeZone/);
   assert.match(game, /rightNonPrimeZone/);
+  assert.match(game, /GATE_HOVER_MS = 700/);
+  assert.match(game, /GATE_RADIUS_RATIO = 0\.12/);
+  assert.doesNotMatch(game, /gestures\.leftCursor && gestures\.leftCursor\.x < 0\.42/);
+  assert.doesNotMatch(game, /gestures\.rightCursor && gestures\.rightCursor\.x > 0\.58/);
   assert.match(game, /聚爆跳過/);
   assert.match(game, /進入下一關：合數破陣/);
 });
