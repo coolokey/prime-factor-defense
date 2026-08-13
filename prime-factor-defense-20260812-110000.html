@@ -479,8 +479,8 @@
 
       <div class="actionbar">
         <button class="ghost" type="button" id="pauseButton">暫停</button>
-        <button class="primary" type="button" id="splitButton">裂解 Space</button>
-        <button class="ghost" type="button" id="menuButton">選因數 F</button>
+        <button class="primary" type="button" id="splitButton">質數 A</button>
+        <button class="ghost" type="button" id="menuButton">非質數 D</button>
         <button class="ghost warn" type="button" id="burstButton">聚爆 Q</button>
       </div>
 
@@ -513,12 +513,12 @@
       <section class="overlay" id="overlay">
         <div class="intro-card">
           <img class="intro-logo" src="assets/renkai/SUUKAI_Logo_2.png" alt="數界" />
-          <h2>合數來襲</h2>
-          <p>合數會逼近中央防線。先裂解，再選出正確質因數；質數敵人則直接辨識。題目數字不超過 100，適合國中質數與合數單元練習。</p>
+          <h2>第一關：質數守門</h2>
+          <p>100 以內共有 25 個質數。判斷出現的數字是不是質數；1 不是質數，所以本關歸類為非質數。答對 10 題即可進入下一關：合數破陣。</p>
           <div class="rules">
-            <div class="rule"><img src="assets/renkai/images/instructions/icon_01.png" alt="" /><b>合數</b><span>雙手張開或按 Space，分解成質因數。</span></div>
-            <div class="rule"><img src="assets/renkai/images/instructions/icon_02.png" alt="" /><b>質因數</b><span>單手握拳或按 F，選出標記的質因數。</span></div>
-            <div class="rule"><img src="assets/renkai/images/instructions/icon_03.png" alt="" /><b>聚爆</b><span>雙掌相對集氣後向前推出，也可按 Q。</span></div>
+            <div class="rule"><img src="assets/renkai/images/instructions/icon_01.png" alt="" /><b>質數</b><span>左手移到左側魔法陣，也可按 A。</span></div>
+            <div class="rule"><img src="assets/renkai/images/instructions/icon_02.png" alt="" /><b>非質數</b><span>右手移到右側魔法陣，也可按 D。</span></div>
+            <div class="rule"><img src="assets/renkai/images/instructions/icon_03.png" alt="" /><b>聚爆</b><span>聚爆跳過目前題目，不加分，也可按 Q。</span></div>
           </div>
           <button class="primary" type="button" id="startButton">開始練習</button>
         </div>
@@ -528,6 +528,9 @@
     <script type="module">
       import { isFist, isOpenHand, palmsFacingEachOther, palmsForward } from "./gesture-core.mjs";
       import { applyFactorPair, getFactorPairs } from "./prime-core.mjs";
+
+      const PRIME_GATE_GOAL = 10;
+      const PRIME_REVIEW_TEXT = "100 以內共有 25 個質數：2、3、5、7、11、13、17、19、23、29、31、37、41、43、47、53、59、61、67、71、73、79、83、89、97。";
 
       const AURORA = {
         leftHand: "#39D7E7",
@@ -560,8 +563,11 @@
         maxHealth: 10,
         combo: 0,
         streak: 0,
-        burst: 3,
+        burst: 2,
         target: null,
+        primeGateCorrect: 0,
+        gateHover: null,
+        gateHoverSince: 0,
         choicesOpen: false,
         feedbackUntil: 0,
         feedbackTitle: "",
@@ -904,6 +910,15 @@
 
       function applyGestureActions(time) {
         if (state.phase !== "playing") return;
+        trackPrimeGateHands(time);
+        if (state.target?.isPrimeGate) {
+          handleGestureBurst(time);
+          gestures.previousLeftOpen = gestures.leftOpen;
+          gestures.previousRightOpen = gestures.rightOpen;
+          gestures.previousLeftFist = gestures.leftFist;
+          gestures.previousRightFist = gestures.rightFist;
+          return;
+        }
         const openedBothHands =
           gestures.leftOpen &&
           gestures.rightOpen &&
@@ -922,6 +937,28 @@
         gestures.previousRightOpen = gestures.rightOpen;
         gestures.previousLeftFist = gestures.leftFist;
         gestures.previousRightFist = gestures.rightFist;
+      }
+
+      function trackPrimeGateHands(time) {
+        if (!state.target || state.choicesOpen) return;
+        const leftPrimeZone = gestures.leftCursor && gestures.leftCursor.x < 0.42;
+        const rightNonPrimeZone = gestures.rightCursor && gestures.rightCursor.x > 0.58;
+        const choice = leftPrimeZone ? true : rightNonPrimeZone ? false : null;
+        if (choice == null) {
+          state.gateHover = null;
+          state.gateHoverSince = 0;
+          return;
+        }
+        if (state.gateHover !== choice) {
+          state.gateHover = choice;
+          state.gateHoverSince = time;
+          playSfx("select");
+        }
+        if (time - state.gateHoverSince >= 520) {
+          state.gateHover = null;
+          state.gateHoverSince = 0;
+          answerPrimeGate(choice);
+        }
       }
 
       function trackGestureChoice(time) {
@@ -1057,8 +1094,11 @@
           maxHealth: preferences.maxHealth,
           combo: 0,
           streak: 0,
-          burst: 3,
+          burst: 2,
           target: null,
+          primeGateCorrect: 0,
+          gateHover: null,
+          gateHoverSince: 0,
           choicesOpen: false,
           menuHand: null,
           hoverChoice: null,
@@ -1074,35 +1114,32 @@
         });
         overlay.classList.add("hidden");
         closeChoices();
-        showFeedback("開始防衛", "每次選一組因數對，直到整棵樹的分支都是質數。", 1900);
+        showFeedback("質數守門", `${PRIME_REVIEW_TEXT} 左手判質數，右手判非質數；答對 ${PRIME_GATE_GOAL} 題過關。`, 4200);
         syncHud();
       }
 
       function spawnTarget() {
-        const pool = getDifficultyPool(state.level).filter((value) => !isPrime(value));
+        const pool = Array.from({ length: 100 }, (_, index) => index + 1);
         const number = pool[Math.floor(Math.random() * pool.length)];
         state.target = {
           id: Date.now() + Math.random(),
           number,
           progress: 0,
-          branches: [{ id: "root", value: number, side: "center" }],
-          activeBranchId: "root",
+          isPrimeGate: true,
         };
-        teacherNote.textContent = `${number} 先從一組因數對開始拆；合數分支還要繼續處理。`;
+        teacherNote.textContent = `第一關：質數守門。左手選質數，右手選非質數；已答對 ${state.primeGateCorrect}/${PRIME_GATE_GOAL} 題。`;
             addRing(AURORA.leftHand, 1);
       }
 
       function splitTarget() {
-        const target = state.target;
-        if (!target) {
-          playSfx("cancel");
-          showFeedback("等待數字", "下一個合數即將進場。", 1200);
-          return;
-        }
-        openChoices();
+        answerPrimeGate(true);
       }
 
       function openChoices(menuHand = "left") {
+        if (state.target?.isPrimeGate) {
+          answerPrimeGate(false);
+          return;
+        }
         const target = state.target;
         if (!target || state.choicesOpen) return;
         const branch = getBranchForHand(target, menuHand);
@@ -1185,16 +1222,70 @@
         syncHud();
       }
 
+      function answerPrimeGate(choosePrime) {
+        const target = state.target;
+        if (!target || !target.isPrimeGate || state.phase !== "playing") return;
+        const number = target.number;
+        const correct = isPrime(number) === choosePrime;
+        state.target = null;
+        state.nextSpawnAt = performance.now() + (correct ? 520 : 780);
+        closeChoices();
+        if (correct) {
+          playSfx("correct");
+          state.score += 1;
+          state.primeGateCorrect += 1;
+          state.combo += 1;
+          state.streak += 1;
+          burstParticles(width() / 2, height() * 0.5, AURORA.correct, 34);
+          addRing(AURORA.correct, 0.9);
+          showFeedback("判斷正確", `${number} ${isPrime(number) ? "是質數" : "不是質數"}。`, 1300);
+          if (state.streak >= 5) {
+            playSfx("stack");
+            state.burst = Math.min(3, state.burst + 1);
+            state.streak -= 5;
+            showFeedback("聚爆補充", "連續答對 5 題，獲得 1 次聚爆。", 1500);
+          }
+          if (state.primeGateCorrect >= PRIME_GATE_GOAL) completePrimeGate();
+        } else {
+          state.health -= 1;
+          playSfx("wrong");
+          state.combo = 0;
+          state.streak = 0;
+          addRing(AURORA.danger, 1);
+          showFeedback("判斷錯誤", getPrimeGateHint(number), 2200);
+          if (state.health <= 0) endGame();
+        }
+        syncHud();
+      }
+
+      function getPrimeGateHint(number) {
+        if (number === 1) return "1 只有一個正因數，所以不是質數。";
+        if (isPrime(number)) return `${number} 只有 1 和 ${number} 兩個正因數。`;
+        const pair = getFactorPairs(number)[0];
+        return pair ? `${number} = ${pair[0]} × ${pair[1]}，所以不是質數。` : `${number} 不是質數。`;
+      }
+
+      function completePrimeGate() {
+        stopBattleBgm();
+        playSfx("stack");
+        state.phase = "clear";
+        state.target = null;
+        closeChoices();
+        overlay.classList.remove("hidden");
+        overlay.querySelector("h2").textContent = "質數守門通過";
+        overlay.querySelector("p").textContent = `答對 ${PRIME_GATE_GOAL} 題。進入下一關：合數破陣。`;
+        overlay.querySelector("#startButton").textContent = "再玩一次第一關";
+      }
+
       function useBurst() {
         if (!state.target || state.burst <= 0) {
           playSfx("cancel");
           return;
         }
-        const target = state.target;
         state.burst -= 1;
-        state.score += target.branches.length;
-        state.combo += 1;
         state.target = null;
+        state.gateHover = null;
+        state.gateHoverSince = 0;
         state.nextSpawnAt = performance.now() + 560;
         closeChoices();
         stopLoop("charge");
@@ -1202,7 +1293,7 @@
         triggerBurstGlyph();
             burstParticles(width() / 2, height() * 0.5, AURORA.rightHand, 90);
             addRing(AURORA.rightHand, 1.35);
-        showFeedback("聚爆釋放", "清除當前題目。記得保留聚爆處理困難數字。", 1500);
+        showFeedback("聚爆跳過", "已清除目前題目。這題不加分，也不算答對。", 1500);
         syncHud();
       }
 
@@ -1216,19 +1307,19 @@
         state.nextSpawnAt = performance.now() + 520;
         closeChoices();
             addRing(AURORA.danger, 1);
-        showFeedback("防線受損", missed
-          ? `${missed.number} 的分解樹未能及時完成。`
-          : "數字突破了防線。", 2200);
-        if (state.health <= 0) {
-          stopBattleBgm();
-          playSfx("gameover");
-          state.phase = "gameover";
-          overlay.classList.remove("hidden");
-          overlay.querySelector("h2").textContent = "防線崩解";
-          overlay.querySelector("p").textContent = `最後分數 ${state.score}。數式核心已保存，重整呼吸後再次鍊成。`;
-          overlay.querySelector("#startButton").textContent = "重新開始";
-        }
+        showFeedback("防線受損", missed ? `${missed.number} 尚未完成質數判斷。` : "數字突破了防線。", 2200);
+        if (state.health <= 0) endGame();
         syncHud();
+      }
+
+      function endGame() {
+        stopBattleBgm();
+        playSfx("gameover");
+        state.phase = "gameover";
+        overlay.classList.remove("hidden");
+        overlay.querySelector("h2").textContent = "防線崩解";
+        overlay.querySelector("p").textContent = `已答對 ${state.primeGateCorrect} 題。重新複習 100 以內質數後再挑戰。`;
+        overlay.querySelector("#startButton").textContent = "重新開始";
       }
 
       function showFeedback(title, body, duration) {
@@ -1371,6 +1462,10 @@
         if (!target) return;
         const centerX = w / 2;
         const centerY = h * 0.5;
+        if (target.isPrimeGate) {
+          drawPrimeGateTarget(target, w, h, time);
+          return;
+        }
         const approachScale = 0.52 + target.progress * 1.95;
         ctx.save();
         ctx.translate(centerX, centerY);
@@ -1386,6 +1481,49 @@
         drawCenterLabel(`${target.number} 的分解樹`);
         ctx.restore();
         drawProgress(centerX, centerY, target.progress);
+      }
+
+      function drawPrimeGateTarget(target, w, h, time) {
+        const centerX = w / 2;
+        const centerY = h * 0.5;
+        const approachScale = 0.72 + target.progress * 1.35;
+        drawPrimeChoiceZone(w * 0.24, centerY, "質數", AURORA.leftHand, state.gateHover === true, time);
+        drawPrimeChoiceZone(w * 0.76, centerY, "非質數", AURORA.rightHand, state.gateHover === false, time);
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(approachScale, approachScale);
+        drawNumberNode(target.number, 0, 0, 56, true, time, isPrime(target.number));
+        drawCenterLabel(`第 1 關：${state.primeGateCorrect}/${PRIME_GATE_GOAL}`);
+        ctx.restore();
+        drawProgress(centerX, centerY, target.progress);
+      }
+
+      function drawPrimeChoiceZone(x, y, label, color, active, time) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.globalAlpha = active ? 0.95 : 0.52;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = "rgba(3, 10, 20, 0.44)";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = active ? 34 : 18;
+        ctx.lineWidth = active ? 5 : 3;
+        for (let index = 0; index < 3; index += 1) {
+          ctx.beginPath();
+          ctx.arc(0, 0, 72 + index * 18 + Math.sin(time * 0.002 + index) * 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(0, 0, 84, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = '900 30px "Microsoft JhengHei", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, 0, 0);
+        ctx.fillStyle = "rgba(233, 251, 255, 0.78)";
+        ctx.font = '700 13px "Microsoft JhengHei", sans-serif';
+        ctx.fillText(active ? "判定中" : "停留半秒", 0, 38);
+        ctx.restore();
       }
 
       function drawNumberNode(number, x, y, radius, active, time, prime = false) {
@@ -1634,8 +1772,8 @@
       }
 
       document.querySelector("#startButton").addEventListener("click", startGame);
-      document.querySelector("#splitButton").addEventListener("click", splitTarget);
-      document.querySelector("#menuButton").addEventListener("click", openChoices);
+      document.querySelector("#splitButton").addEventListener("click", () => answerPrimeGate(true));
+      document.querySelector("#menuButton").addEventListener("click", () => answerPrimeGate(false));
       document.querySelector("#burstButton").addEventListener("click", useBurst);
       document.querySelector("#pauseButton").addEventListener("click", () => setPaused(true));
       document.querySelector("#resumeButton").addEventListener("click", () => setPaused(false));
@@ -1698,12 +1836,12 @@
           setPaused(true);
           return;
         }
-        if (event.code === "Space") {
-          event.preventDefault();
-          splitTarget();
-        }
-        if (event.key.toLowerCase() === "f") openChoices();
-        if (event.key.toLowerCase() === "q") useBurst();
+          if (event.key.toLowerCase() === "a" || event.code === "Space") {
+            event.preventDefault();
+            answerPrimeGate(true);
+          }
+          if (event.key.toLowerCase() === "d") answerPrimeGate(false);
+          if (event.key.toLowerCase() === "q") useBurst();
         const index = Number(event.key) - 1;
         if (state.choicesOpen && index >= 0 && index < choiceGrid.children.length) {
           choiceGrid.children[index].click();

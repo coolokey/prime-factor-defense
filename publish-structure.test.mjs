@@ -86,3 +86,23 @@ test("gesture layer renders glowing skeletons, fingertips, trails, and burst cha
   assert.match(game, /function drawBurstChargeAura/);
   assert.match(game, /globalCompositeOperation = "lighter"/);
 });
+
+test("first level is a prime versus non-prime gate with ten correct answers to pass", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /質數守門/);
+  assert.match(game, /100 以內共有 25 個質數/);
+  assert.match(game, /PRIME_GATE_GOAL = 10/);
+  assert.match(game, /primeGateCorrect/);
+  assert.match(game, /answerPrimeGate\(true\)/);
+  assert.match(game, /answerPrimeGate\(false\)/);
+  assert.match(game, /leftPrimeZone/);
+  assert.match(game, /rightNonPrimeZone/);
+  assert.match(game, /聚爆跳過/);
+  assert.match(game, /進入下一關：合數破陣/);
+});
