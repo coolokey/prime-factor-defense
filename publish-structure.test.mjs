@@ -135,3 +135,18 @@ test("latest game reviews all 25 primes before the first challenge starts", () =
   assert.match(game, /state\.phase = "review"/);
   assert.match(game, /trackReviewConfirmGesture/);
 });
+
+test("latest game shows remaining lives as red hearts and lost lives as white hearts", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /\.hearts i\.alive/);
+  assert.match(game, /\.hearts i\.lost/);
+  assert.match(game, /heart\.classList\.toggle\("alive", index < state\.health\)/);
+  assert.match(game, /heart\.classList\.toggle\("lost", index >= state\.health\)/);
+  assert.doesNotMatch(game, /heart\.classList\.toggle\("active", index < state\.health\)/);
+});
