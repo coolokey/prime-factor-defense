@@ -14,6 +14,8 @@ test("publishes the playable game as a dated html file", () => {
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(index, new RegExp(latest));
+  assert.match(index, new RegExp(`url=${latest}`));
+  assert.match(index, new RegExp(`href="${latest}"`));
   assert.match(index, /保留版本/);
   assert.match(game, /startCamera/i);
   assert.match(game, /質因數防衛戰/);
@@ -28,7 +30,7 @@ test("latest game carries the Renkai visual and audio skin", () => {
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /assets\/renkai\/SUUKAI_Logo_2\.png/);
+  assert.match(game, /assets\/renkai\/SUUKAI_Logo_2(?:_[^"]+)?\.png/);
   assert.match(game, /數界視覺版/);
   assert.match(game, /數界術式/);
   assert.match(game, /assets\/renkai\/99_數\.png/);
