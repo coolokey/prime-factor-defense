@@ -33,6 +33,7 @@ test("latest game carries the Renkai visual and audio skin", () => {
   assert.match(game, /assets\/renkai\/SUUKAI_Logo_2(?:_[^"]+)?\.png/);
   assert.match(game, /數界視覺版/);
   assert.match(game, /數界術式/);
+  assert.match(game, /intro-logo[\s\S]*clamp\(150px,\s*24vh,\s*260px\)/);
   assert.match(game, /assets\/renkai\/99_數\.png/);
   assert.match(game, /audio\/bgm\/00_battle_BGM\.mp3/);
   assert.match(game, /audio\/sfx\/02_magic_circle_open\.wav/);
