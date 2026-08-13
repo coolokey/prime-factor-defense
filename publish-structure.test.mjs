@@ -169,7 +169,23 @@ test("latest game shows remaining lives as red hearts and lost lives as white he
 
   assert.match(game, /\.hearts i\.alive/);
   assert.match(game, /\.hearts i\.lost/);
+  assert.match(game, /heart\.textContent = index < state\.health \? "♥" : "♡"/);
+  assert.match(game, /heart\.style\.color = index < state\.health \? "var\(--danger\)" : "#f8feff"/);
   assert.match(game, /heart\.classList\.toggle\("alive", index < state\.health\)/);
   assert.match(game, /heart\.classList\.toggle\("lost", index >= state\.health\)/);
   assert.doesNotMatch(game, /heart\.classList\.toggle\("active", index < state\.health\)/);
+});
+
+test("latest review screen keeps the prime list compact instead of full-bleed", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /prime-review-card \{ width: min\(760px, 100%\)/);
+  assert.match(game, /prime-list[\s\S]*?max-width: 720px/);
+  assert.match(game, /prime-chip[\s\S]*?min-height: 32px/);
+  assert.match(game, /review-zone[\s\S]*?min-height: 82px/);
 });
