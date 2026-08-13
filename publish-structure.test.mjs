@@ -33,7 +33,9 @@ test("latest game carries the Renkai visual and audio skin", () => {
   assert.match(game, /assets\/renkai\/SUUKAI_Logo_2(?:_[^"]+)?\.png/);
   assert.match(game, /數界視覺版/);
   assert.match(game, /數界術式/);
-  assert.match(game, /intro-logo[\s\S]*clamp\(450px,\s*72vh,\s*780px\)/);
+  assert.match(game, /SUUKAI_Logo_2_20260813_tight\.png/);
+  assert.match(game, /intro-logo[\s\S]*clamp\(260px,\s*42vh,\s*420px\)/);
+  assert.match(game, /max-height: calc\(100vh - 48px\)/);
   assert.match(game, /assets\/renkai\/99_數\.png/);
   assert.match(game, /audio\/bgm\/00_battle_BGM\.mp3/);
   assert.match(game, /audio\/sfx\/02_magic_circle_open\.wav/);

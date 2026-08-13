@@ -1,0 +1,1989 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>質因數防衛戰｜數界視覺版</title>
+    <style>
+
+      :root {
+        --cyan: #64ecff;
+        --cyan-soft: rgba(100, 236, 255, 0.16);
+        --gold: #ffe394;
+        --danger: #ff567d;
+        --core: #030710;
+        --panel: rgba(3, 10, 20, 0.82);
+        --ink: #e9fbff;
+        --muted: #7fa7b3;
+        --violet: #9a7cff;
+        --green: #78ffc0;
+        --shadow: rgba(0, 0, 0, 0.5);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body {
+        color: var(--ink);
+        font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+        background: var(--core);
+        font-synthesis: none;
+      }
+      button, input, select { font: inherit; }
+      button { letter-spacing: 0.04em; }
+
+      .app {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 580px;
+        overflow: hidden;
+        isolation: isolate;
+        background-color: var(--core);
+        background-image:
+          radial-gradient(circle at 50% 43%, rgba(26, 98, 120, 0.2), transparent 36%),
+          radial-gradient(circle at 15% 90%, rgba(39, 98, 132, 0.12), transparent 28%);
+      }
+      .app::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        pointer-events: none;
+        opacity: 0.28;
+        background-image: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(117, 237, 255, 0.035) 4px);
+      }
+      .app::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 150px 44px rgba(0, 0, 0, 0.64);
+        z-index: 4;
+      }
+
+      canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      #game { z-index: 1; }
+      #handOverlay { z-index: 50; pointer-events: none; }
+      .hidden { display: none !important; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+      .topbar {
+        position: absolute;
+        z-index: 12;
+        top: 0;
+        left: 0;
+        right: 0;
+        min-height: 126px;
+        padding: max(14px, env(safe-area-inset-top)) 24px 0;
+        display: grid;
+        grid-template-columns: minmax(190px, 1fr) minmax(280px, 520px) minmax(190px, 1fr);
+        gap: 16px;
+        align-items: start;
+        pointer-events: none;
+        background: linear-gradient(180deg, rgba(3, 7, 16, 0.92), rgba(3, 7, 16, 0));
+      }
+      .brand {
+        justify-self: start;
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+        max-width: 390px;
+        padding: 10px 12px;
+        border: 1px solid rgba(100, 236, 255, 0.28);
+        background: rgba(3, 10, 20, 0.68);
+        backdrop-filter: blur(10px);
+        clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+      }
+      .brand-logo {
+        width: 48px;
+        height: 68px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 14px rgba(100, 236, 255, 0.36));
+      }
+      .brand h1 { margin: 0; font-size: clamp(22px, 2.5vw, 34px); line-height: 1.05; letter-spacing: 0.14em; }
+      .brand p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+      .stats {
+        justify-self: center;
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(70px, 1fr));
+        gap: 10px;
+        padding: 9px 14px 12px;
+        border-bottom: 1px solid rgba(100, 236, 255, 0.42);
+        position: relative;
+      }
+      .stats::after {
+        content: "";
+        position: absolute;
+        bottom: -4px;
+        left: calc(50% - 4px);
+        width: 8px;
+        height: 8px;
+        background: var(--cyan);
+        transform: rotate(45deg);
+        box-shadow: 0 0 12px var(--cyan);
+      }
+      .stat { min-width: 0; text-align: center; }
+      .stat span { display: block; color: #76a2b1; font: 700 9px system-ui, sans-serif; letter-spacing: 0.22em; }
+      .stat strong { display: block; margin-top: 4px; color: #f3feff; font: 700 27px/1.1 "Microsoft JhengHei", system-ui, sans-serif; text-shadow: 0 0 14px rgba(100, 236, 255, 0.55); }
+      .health-stat { min-width: 132px; }
+      .hearts { display: flex; justify-content: center; gap: 3px; min-height: 26px; color: #f8feff; font-size: 18px; line-height: 1; }
+      .hearts i { font-style: normal; transition: transform 0.25s ease, color 0.25s ease, text-shadow 0.25s ease; }
+      .hearts i.alive { color: var(--danger); text-shadow: 0 0 9px rgba(255, 86, 125, 0.82); }
+      .hearts i.lost { color: #f8feff; text-shadow: 0 0 7px rgba(255, 255, 255, 0.54); opacity: 0.82; }
+
+      .teacher-note {
+        justify-self: end;
+        max-width: 350px;
+        margin: 0;
+        padding: 13px 14px;
+        color: #a9d5df;
+        font-size: 12px;
+        line-height: 1.55;
+        border: 1px solid rgba(255, 227, 148, 0.28);
+        background: rgba(3, 10, 20, 0.68);
+        backdrop-filter: blur(10px);
+        clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      }
+
+      .feedback {
+        position: absolute;
+        z-index: 18;
+        left: 50%;
+        top: 138px;
+        width: min(560px, calc(100vw - 32px));
+        padding: 12px 16px;
+        text-align: center;
+        transform: translateX(-50%);
+        border: 1px solid rgba(100, 236, 255, 0.26);
+        background: rgba(3, 10, 20, 0.72);
+        backdrop-filter: blur(10px);
+        clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      }
+      .feedback strong { display: block; margin-bottom: 4px; color: #fff; font-size: 18px; letter-spacing: 0.1em; }
+      .feedback p, .hint { margin: 0; color: #8eb7c1; font-size: 12px; line-height: 1.55; }
+
+      .camera-panel {
+        position: absolute;
+        z-index: 14;
+        right: 24px;
+        bottom: calc(env(safe-area-inset-bottom) + 24px);
+        width: 180px;
+        pointer-events: none;
+      }
+      .camera-panel video {
+        width: 180px;
+        aspect-ratio: 16 / 10;
+        display: block;
+        object-fit: cover;
+        transform: scaleX(-1);
+        opacity: 0.26;
+        filter: saturate(0.45) contrast(1.4);
+        border: 1px solid rgba(100, 236, 255, 0.36);
+        background: rgba(3, 10, 20, 0.9);
+        clip-path: polygon(9% 0, 100% 0, 100% 78%, 91% 100%, 0 100%, 0 22%);
+      }
+      .camera-panel p {
+        margin: 7px 0 0;
+        color: #6f95a0;
+        font-size: 10px;
+        line-height: 1.45;
+        text-align: right;
+      }
+      .camera-panel strong { color: var(--cyan); }
+
+      .controls, .actionbar {
+        position: absolute;
+        z-index: 16;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .controls { left: 24px; bottom: calc(env(safe-area-inset-bottom) + 24px); flex-wrap: wrap; max-width: 360px; }
+      .actionbar { left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%); }
+      .controls button, .primary, .ghost, .settings-entry, .settings-actions button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 14px;
+        color: #bdeff5;
+        border: 1px solid rgba(100, 236, 255, 0.28);
+        background: rgba(3, 10, 20, 0.78);
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+      .controls button:hover, .primary:hover, .ghost:hover, .settings-entry:hover, .settings-actions button:hover { transform: translateY(-2px); border-color: var(--cyan); box-shadow: 0 0 18px var(--cyan-soft); }
+      .controls button.active, .primary { color: #021015; border-color: transparent; background: var(--cyan); font-weight: 800; box-shadow: 0 0 28px rgba(100, 236, 255, 0.24); }
+      .ghost.warn { color: #1d1200; border-color: transparent; background: var(--gold); font-weight: 800; }
+      button:disabled { opacity: 0.42; cursor: default; transform: none !important; box-shadow: none !important; }
+
+      .settings-entry {
+        position: absolute;
+        z-index: 19;
+        top: calc(env(safe-area-inset-top) + 16px);
+        right: calc(env(safe-area-inset-right) + 18px);
+      }
+
+      .charge-meter {
+        position: absolute;
+        z-index: 17;
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom) + 82px);
+        width: min(680px, calc(100vw - 56px));
+        height: 34px;
+        overflow: hidden;
+        border: 1px solid rgba(100, 236, 255, 0.45);
+        background: rgba(3, 10, 20, 0.78);
+        box-shadow: 0 0 25px rgba(100, 236, 255, 0.16);
+        transform: translateX(-50%);
+      }
+      .charge-meter::before {
+        content: "聚爆集氣中";
+        position: absolute;
+        z-index: 2;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: #d9fbff;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+      }
+      .charge-meter i { display: block; width: 0%; height: 100%; background: linear-gradient(90deg, rgba(42, 196, 232, 0.3), rgba(255, 227, 148, 0.72)); box-shadow: 0 0 24px var(--gold); transition: width 0.08s linear; }
+
+      .magic-menu {
+        position: absolute;
+        z-index: 46;
+        left: 50%;
+        top: 50%;
+        width: min(330px, 42vw);
+        aspect-ratio: 1;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        transform: translate(-50%, -50%);
+        animation: menu-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+      .magic-menu h2, .magic-menu .hint { position: absolute; left: 50%; width: 78%; transform: translateX(-50%); text-align: center; pointer-events: none; }
+      .magic-menu h2 { top: 38%; margin: 0; color: #fff; font-size: 15px; letter-spacing: 0.08em; text-shadow: 0 0 12px var(--cyan); }
+      .magic-menu .hint { top: 55%; color: #63818c; font-size: 9px; line-height: 1.35; }
+      .magic-menu::before, .magic-menu::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .magic-menu::before { inset: 7%; border: 1px solid rgba(100, 236, 255, 0.42); box-shadow: 0 0 38px rgba(100, 236, 255, 0.1), inset 0 0 38px rgba(100, 236, 255, 0.06); animation: rotate 24s linear infinite; }
+      .magic-menu::after { inset: 24%; border: 1px dotted rgba(255, 227, 148, 0.48); animation: rotate 15s linear infinite reverse; }
+      .choice-grid { position: absolute; inset: 0; display: block; }
+      .magic-menu button {
+        --choice-color: var(--cyan);
+        position: absolute;
+        width: 86px;
+        height: 86px;
+        padding: 5px;
+        display: grid;
+        place-items: center;
+        color: #eaffff;
+        border: 1px solid color-mix(in srgb, var(--choice-color), transparent 42%);
+        background: rgba(4, 14, 25, 0.94);
+        cursor: pointer;
+        overflow: hidden;
+        font-size: 18px;
+        font-weight: 900;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .magic-menu button::after { content: ""; position: absolute; left: 0; bottom: 0; width: 0; height: 3px; background: var(--choice-color); box-shadow: 0 0 14px var(--choice-color); }
+      .magic-menu button:hover, .magic-menu button.active { transform: scale(1.08); box-shadow: 0 0 25px color-mix(in srgb, var(--choice-color), transparent 55%); }
+      .magic-menu button.active::after { width: 100%; }
+      .magic-menu button:nth-child(1) { --choice-color: #55d9ff; left: calc(50% - 43px); top: 0; }
+      .magic-menu button:nth-child(2) { --choice-color: #b77cff; right: 0; top: calc(50% - 43px); }
+      .magic-menu button:nth-child(3) { --choice-color: #ffc45f; left: calc(50% - 43px); bottom: 0; }
+      .magic-menu button:nth-child(4) { --choice-color: #4de0bd; left: 0; top: calc(50% - 43px); }
+      .magic-menu.choice-count-2 button:nth-child(1) { left: 3%; top: calc(50% - 43px); }
+      .magic-menu.choice-count-2 button:nth-child(2) { right: 3%; top: calc(50% - 43px); left: auto; }
+      .magic-menu.choice-count-3 button:nth-child(1) { left: calc(50% - 43px); top: 0; }
+      .magic-menu.choice-count-3 button:nth-child(2) { right: 6%; top: 62%; }
+      .magic-menu.choice-count-3 button:nth-child(3) { left: 6%; top: 62%; bottom: auto; }
+      .magic-menu.choice-count-5 button { width: 78px; height: 78px; font-size: 16px; }
+      .magic-menu.choice-count-5 button:nth-child(1) { left: calc(50% - 39px); top: 0; }
+      .magic-menu.choice-count-5 button:nth-child(2) { right: 0; top: 26%; }
+      .magic-menu.choice-count-5 button:nth-child(3) { right: 13%; top: auto; bottom: 0; left: auto; }
+      .magic-menu.choice-count-5 button:nth-child(4) { left: 13%; top: auto; bottom: 0; }
+      .magic-menu.choice-count-5 button:nth-child(5) { left: 0; top: 26%; }
+
+      .overlay {
+        position: absolute;
+        z-index: 60;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        overflow: auto;
+        text-align: center;
+        background-color: rgba(3, 7, 16, 0.94);
+        background-image:
+          radial-gradient(circle at 50% 34%, rgba(39, 132, 158, 0.26), transparent 33%),
+          radial-gradient(circle at 16% 70%, rgba(103, 73, 183, 0.12), transparent 28%),
+          linear-gradient(rgba(3, 7, 16, 0.5), rgba(3, 7, 16, 0.94));
+      }
+      .overlay::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          radial-gradient(circle at 17% 24%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
+          radial-gradient(circle at 73% 31%, rgba(102,239,255,0.75) 0 1px, transparent 2px),
+          radial-gradient(circle at 42% 71%, rgba(255,227,148,0.62) 0 1px, transparent 2px);
+        background-size: 173px 181px, 229px 211px, 193px 251px;
+        opacity: 0.48;
+        animation: cosmic-drift 16s ease-in-out infinite alternate;
+      }
+      .intro-card { position: relative; z-index: 1; width: min(900px, 100%); max-height: calc(100vh - 48px); text-align: center; }
+      .intro-logo {
+        width: clamp(260px, 42vh, 420px);
+        max-width: 78vw;
+        height: auto;
+        object-fit: contain;
+        filter:
+          drop-shadow(0 0 18px rgba(255, 255, 255, 0.28))
+          drop-shadow(0 0 46px rgba(100, 236, 255, 0.34))
+          drop-shadow(0 16px 58px rgba(0, 0, 0, 0.45));
+      }
+      .intro-card h2 { margin: -6px 0 8px; font-size: clamp(34px, 6vw, 70px); line-height: 1.04; letter-spacing: 0.14em; text-shadow: 0 0 36px rgba(100, 236, 255, 0.28); }
+      .intro-card p { max-width: 650px; margin: 12px auto 22px; color: #91aeb9; line-height: 1.75; }
+      .prime-review-card { width: min(980px, 100%); }
+      .prime-list {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 9px;
+        margin: 20px auto 22px;
+      }
+      .prime-chip {
+        min-height: 44px;
+        display: grid;
+        place-items: center;
+        color: #f8feff;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 900;
+        border: 1px solid rgba(100, 236, 255, 0.34);
+        background: rgba(6, 20, 32, 0.72);
+        box-shadow: inset 0 0 20px rgba(100, 236, 255, 0.08), 0 0 16px rgba(100, 236, 255, 0.08);
+        clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+      }
+      .review-confirm {
+        min-width: min(420px, 82vw);
+        min-height: 58px;
+        font-size: 18px;
+        position: relative;
+        overflow: hidden;
+      }
+      .review-confirm.active {
+        box-shadow: 0 0 42px rgba(100, 236, 255, 0.48), inset 0 0 24px rgba(255, 255, 255, 0.26);
+        transform: translateY(-2px) scale(1.03);
+      }
+      .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 auto 24px; }
+      .rule { padding: 12px 13px 14px; border-top: 1px solid rgba(100,236,255,0.36); background: rgba(100,236,255,0.05); }
+      .rule img { display: block; width: 76px; height: 64px; object-fit: contain; margin: 0 auto 7px; }
+      .rule b { display: block; margin-bottom: 5px; color: #fff; font-size: 13px; }
+      .rule span { display: block; color: #6f8d99; font-size: 10px; line-height: 1.45; }
+
+      .settings-panel { position: absolute; z-index: 70; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(1, 5, 12, 0.86); backdrop-filter: blur(12px); }
+      .settings-card { width: min(500px, 100%); padding: 20px 22px; border: 1px solid rgba(100, 236, 255, 0.4); background: linear-gradient(145deg, rgba(8,25,38,0.98), rgba(3,9,20,0.98)); box-shadow: 0 0 55px rgba(34,190,224,0.18); clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); }
+      .settings-card h2 { margin: 0 0 16px; font-size: 27px; letter-spacing: 0.16em; }
+      .setting-field { display: grid; gap: 8px; margin: 14px 0; color: var(--ink); }
+      .setting-field label { display: flex; justify-content: space-between; gap: 12px; color: #cdf7fc; font-weight: 800; }
+      .setting-field input[type="range"] { width: 100%; accent-color: var(--cyan); }
+      .setting-field select { min-height: 38px; border: 1px solid rgba(100,236,255,0.35); color: var(--ink); background: #061116; }
+      .setting-toggle { display: flex; align-items: center; gap: 8px; }
+      .settings-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+
+      .burst-ultimate-effect {
+        position: absolute;
+        inset: 0;
+        z-index: 65;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        pointer-events: none;
+        isolation: isolate;
+        contain: layout paint;
+        background: rgba(0, 4, 12, 0.36);
+        animation: burst-scene 0.86s ease-out both;
+      }
+      .burst-ultimate-effect::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: radial-gradient(circle, rgba(255,255,255,0.92), rgba(91,232,255,0.3) 28%, transparent 66%);
+        animation: burst-white-flash 0.86s ease-out both;
+      }
+      .burst-ultimate-effect::after {
+        content: "";
+        position: absolute;
+        width: min(72vmin, 600px);
+        aspect-ratio: 1;
+        border: 2px solid rgba(204, 250, 255, 0.9);
+        border-radius: 50%;
+        box-shadow: 0 0 28px rgba(100,236,255,0.5), inset 0 0 18px rgba(255,255,255,0.25);
+        animation: burst-shockwave 0.86s cubic-bezier(0.12, 0.72, 0.18, 1) both;
+      }
+      .burst-ultimate-effect img { width: min(55vmin, 430px); max-height: 78vh; object-fit: contain; opacity: 0; filter: drop-shadow(0 0 10px rgba(255,255,255,0.78)) drop-shadow(0 0 22px rgba(100,236,255,0.55)); animation: burst-glyph 0.86s cubic-bezier(0.16,0.82,0.2,1) both; }
+
+      @keyframes rotate { to { transform: rotate(360deg); } }
+      @keyframes menu-in { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.68) rotate(-8deg); } }
+      @keyframes cosmic-drift { to { background-position: 22px -12px, -18px 24px, 14px 18px; opacity: 0.7; } }
+      @keyframes burst-scene { 0% { opacity: 0; } 8%,72% { opacity: 1; } to { opacity: 0; } }
+      @keyframes burst-white-flash { 0% { opacity: 0; } 8% { opacity: 1; } 30% { opacity: 0.28; } to { opacity: 0; } }
+      @keyframes burst-shockwave { 0% { opacity: 0; transform: scale(0.12); } 20% { opacity: 0.9; } to { opacity: 0; transform: scale(1.55); } }
+      @keyframes burst-glyph { 0% { opacity: 0; transform: scale(0.65); } 12% { opacity: 1; } 27% { opacity: 1; transform: scale(1.15); } 43%,73% { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.03); } }
+
+      @media (max-width: 760px) {
+        .app { min-height: 620px; }
+        .topbar { grid-template-columns: 1fr; padding: 12px; gap: 8px; }
+        .brand { max-width: calc(100vw - 104px); grid-template-columns: 40px minmax(0, 1fr); padding: 8px 10px; }
+        .brand-logo { width: 34px; height: 48px; }
+        .brand h1 { font-size: 21px; }
+        .brand p, .teacher-note { display: none; }
+        .stats { grid-template-columns: repeat(4, 1fr); padding: 6px 0 10px; }
+        .stat span { font-size: 7px; letter-spacing: 0.08em; }
+        .stat strong { font-size: 21px; }
+        .hearts { font-size: 13px; gap: 1px; }
+        .camera-panel { right: 12px; bottom: calc(env(safe-area-inset-bottom) + 82px); width: 116px; }
+        .camera-panel video { width: 116px; }
+        .camera-panel p { display: none; }
+        .controls { left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 68px); justify-content: center; max-width: none; }
+        .actionbar { left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); transform: none; justify-content: center; flex-wrap: wrap; }
+        .controls button, .primary, .ghost, .settings-entry { min-height: 40px; padding: 0 10px; font-size: 12px; }
+        .settings-entry { top: 12px; right: 12px; }
+        .magic-menu { width: min(300px, 78vw); }
+        .intro-logo { width: clamp(210px, 36vh, 320px); max-width: 82vw; }
+        .intro-card h2 { margin-top: -4px; }
+        .prime-list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+        .prime-chip { min-height: 34px; font-size: 19px; }
+        .rules { grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .rule { padding: 10px 4px; }
+        .rule img { width: 62px; height: 54px; }
+      }
+
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <div class="burst-ultimate-effect hidden" id="burstGlyph" aria-hidden="true"><img src="assets/renkai/99_數.png" alt="" /></div>
+      <canvas id="game" aria-label="質因數防衛戰遊戲畫面"></canvas>
+      <canvas id="handOverlay" aria-hidden="true"></canvas>
+      <video id="cameraFeed" class="hidden" playsinline muted aria-hidden="true"></video>
+
+      <section class="topbar" aria-live="polite">
+        <div class="brand">
+          <img class="brand-logo" src="assets/renkai/SUUKAI_Logo_2_20260813_trad2.png" alt="數界" />
+          <div><h1>質因數防衛戰</h1><p>以數界術式拆解合數，將每個分支鍛造成質數防線。</p></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>分數</span><strong id="score">0</strong></div>
+          <div class="stat health-stat"><span>生命</span><div id="hearts" aria-label="剩餘生命"></div><strong id="health" class="visually-hidden">10</strong></div>
+          <div class="stat"><span>連擊</span><strong id="combo">0</strong></div>
+          <div class="stat"><span>聚爆</span><strong id="burst">3</strong></div>
+        </div>
+        <p class="teacher-note" id="teacherNote">質數只有 1 和自己兩個正因數；1 不是質數，也不是合數。</p>
+      </section>
+
+      <section class="feedback hidden" id="feedback">
+        <strong id="feedbackTitle"></strong>
+        <p id="feedbackBody"></p>
+      </section>
+
+      <section class="magic-menu choice-count-4 hidden" id="choicePanel" role="dialog" aria-label="選擇質因數">
+        <h2 id="choiceTitle">選出正確質因數</h2>
+        <div class="choice-grid" id="choiceGrid"></div>
+        <p class="hint" id="choiceHint">體感模式可用另一手指向選項停留作答；也可以按鍵盤 1、2、3、4。</p>
+      </section>
+
+      <section class="camera-panel" id="cameraPanel">
+        <video id="cameraPreview" playsinline muted aria-hidden="true"></video>
+        <p><strong id="cameraMode">鍵盤模式</strong><br /><span id="gestureStatus">按「開始練習」後會嘗試啟用鏡頭體感。</span></p>
+      </section>
+
+      <div class="charge-meter hidden" id="chargeMeter" aria-label="聚爆集氣進度">
+        <i id="chargeFill"></i>
+      </div>
+
+      <div class="controls">
+        <button type="button" data-level="easy">簡單 2-30</button>
+        <button type="button" data-level="normal" class="active">普通 2-60</button>
+        <button type="button" data-level="challenge">挑戰 2-100</button>
+      </div>
+
+      <div class="actionbar">
+        <button class="ghost" type="button" id="pauseButton">暫停</button>
+        <button class="primary" type="button" id="splitButton">質數 A</button>
+        <button class="ghost" type="button" id="menuButton">非質數 D</button>
+        <button class="ghost warn" type="button" id="burstButton">聚爆 Q</button>
+      </div>
+
+      <button class="settings-entry" type="button" id="settingsButton">設定</button>
+
+      <section class="settings-panel hidden" id="settingsPanel" role="dialog" aria-modal="true" aria-label="遊戲設定">
+        <div class="settings-card">
+          <h2>戰局設定</h2>
+          <div class="setting-field">
+            <label for="lifeCount"><span>生命數</span><span id="lifeCountValue">10 條</span></label>
+            <select id="lifeCount"><option value="5">5 條</option><option value="10">10 條</option></select>
+          </div>
+          <div class="setting-field">
+            <label for="bgmVolume"><span>音樂音量</span><span id="bgmVolumeValue">80%</span></label>
+            <input id="bgmVolume" type="range" min="0" max="100" value="80" />
+          </div>
+          <div class="setting-field">
+            <label for="sfxVolume"><span>音效音量</span><span id="sfxVolumeValue">80%</span></label>
+            <input id="sfxVolume" type="range" min="0" max="100" value="80" />
+          </div>
+          <label class="setting-field setting-toggle" for="cameraPreviewToggle"><input id="cameraPreviewToggle" type="checkbox" checked /> 顯示鏡頭預覽</label>
+          <div class="settings-actions"><button class="primary" type="button" id="closeSettingsButton">完成</button></div>
+        </div>
+      </section>
+
+      <section class="overlay pause-overlay hidden" id="pauseOverlay" role="dialog" aria-label="遊戲暫停">
+        <div class="intro-card"><h2>戰局暫停</h2><p>數字攻勢已凍結。準備好後再繼續練習。</p><button class="primary" type="button" id="resumeButton">繼續練習</button></div>
+      </section>
+
+      <section class="overlay" id="overlay">
+        <div class="intro-card">
+          <img class="intro-logo" src="assets/renkai/SUUKAI_Logo_2_20260813_tight.png" alt="數界" />
+          <h2>第一關：質數守門</h2>
+          <p>100 以內共有 25 個質數。判斷出現的數字是不是質數；1 不是質數，所以本關歸類為非質數。答對 10 題即可進入下一關：合數破陣。</p>
+          <div class="rules">
+            <div class="rule"><img src="assets/renkai/images/instructions/icon_01.png" alt="" /><b>質數</b><span>左手移到左側魔法陣，也可按 A。</span></div>
+            <div class="rule"><img src="assets/renkai/images/instructions/icon_02.png" alt="" /><b>非質數</b><span>右手移到右側魔法陣，也可按 D。</span></div>
+            <div class="rule"><img src="assets/renkai/images/instructions/icon_03.png" alt="" /><b>聚爆</b><span>聚爆跳過目前題目，不加分，也可按 Q。</span></div>
+          </div>
+          <button class="primary" type="button" id="startButton">開始練習</button>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="reviewOverlay" role="dialog" aria-label="25 個質數複習">
+        <div class="intro-card prime-review-card">
+          <h2>複習 25 個質數</h2>
+          <p>100 以內共有 25 個質數。先把它們看熟，再用左手判斷質數、右手判斷非質數。</p>
+          <div class="prime-list" aria-label="100 以內的 25 個質數">
+            <span class="prime-chip">2</span><span class="prime-chip">3</span><span class="prime-chip">5</span><span class="prime-chip">7</span><span class="prime-chip">11</span>
+            <span class="prime-chip">13</span><span class="prime-chip">17</span><span class="prime-chip">19</span><span class="prime-chip">23</span><span class="prime-chip">29</span>
+            <span class="prime-chip">31</span><span class="prime-chip">37</span><span class="prime-chip">41</span><span class="prime-chip">43</span><span class="prime-chip">47</span>
+            <span class="prime-chip">53</span><span class="prime-chip">59</span><span class="prime-chip">61</span><span class="prime-chip">67</span><span class="prime-chip">71</span>
+            <span class="prime-chip">73</span><span class="prime-chip">79</span><span class="prime-chip">83</span><span class="prime-chip">89</span><span class="prime-chip">97</span>
+          </div>
+          <button class="primary review-confirm" type="button" id="reviewConfirmButton">已複習完畢，開始接受挑戰</button>
+          <p class="hint">體感模式：用任一手指向按鈕停留確認，也可以直接點選或按 Enter。</p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { isFist, isOpenHand, palmsFacingEachOther, palmsForward } from "./gesture-core.mjs";
+      import { applyFactorPair, getFactorPairs } from "./prime-core.mjs";
+
+      const PRIME_GATE_GOAL = 10;
+      const GATE_HOVER_MS = 700;
+      const REVIEW_CONFIRM_HOVER_MS = 800;
+      const GATE_CENTER_Y_RATIO = 0.42;
+      const GATE_RADIUS_RATIO = 0.1;
+      const PRIME_REVIEW_TEXT = "100 以內共有 25 個質數：2、3、5、7、11、13、17、19、23、29、31、37、41、43、47、53、59、61、67、71、73、79、83、89、97。";
+
+      const AURORA = {
+        leftHand: "#39D7E7",
+        rightHand: "#FFD166",
+        gold: "#FFD166",
+        correct: "#B9E27A",
+        danger: "#F06478",
+        ink: "#E9F7F7",
+        board: "rgba(100, 236, 255, 0.22)",
+        violet: "#9a7cff",
+      };
+
+      const colors = {
+        2: "#2f62d0",
+        3: "#008f9c",
+        5: "#d9981f",
+        7: "#d94747",
+        11: "#247c53",
+        13: "#8a5fbf",
+        17: "#c45f2d",
+        19: "#327c88",
+        default: "#64ecff",
+      };
+
+      const state = {
+        phase: "intro",
+        level: "normal",
+        score: 0,
+        health: 10,
+        maxHealth: 10,
+        combo: 0,
+        streak: 0,
+        burst: 2,
+        target: null,
+        primeGateCorrect: 0,
+        gateHover: null,
+        gateHoverSince: 0,
+        choicesOpen: false,
+        feedbackUntil: 0,
+        feedbackTitle: "",
+        feedbackBody: "",
+        particles: [],
+        rings: [],
+        nextSpawnAt: 0,
+        lastTime: performance.now(),
+        menuHand: null,
+        hoverChoice: null,
+        hoverSince: 0,
+        reviewHoverSince: 0,
+        chargeStartedAt: 0,
+        chargeLostAt: 0,
+        chargeProgress: 0,
+        burstArmed: false,
+        burstReleaseGraceUntil: 0,
+      };
+
+      const preferences = {
+        bgmVolume: 0.8,
+        sfxVolume: 0.8,
+        maxHealth: 10,
+        showCameraPreview: true,
+      };
+      const RENKAI_ASSETS = {
+        titleBgm: "assets/renkai/audio/bgm/00_Title_BGM.mp3",
+        battleBgm: "assets/renkai/audio/bgm/00_battle_BGM.mp3",
+        burstGlyph: "assets/renkai/99_數.png",
+        sfx: {
+          start: "assets/renkai/audio/sfx/01_voice_Go.wav",
+          menu: "assets/renkai/audio/sfx/02_magic_circle_open.wav",
+          select: "assets/renkai/audio/sfx/03_select_confirm.wav",
+          correct: "assets/renkai/audio/sfx/03_select_confirm.wav",
+          split: "assets/renkai/audio/sfx/04_compound_shatter.wav",
+          charge: "assets/renkai/audio/sfx/05_burst_charge.wav",
+          burst: "assets/renkai/audio/sfx/06_burst_release.wav",
+          cancel: "assets/renkai/audio/sfx/07_select_cancel.wav",
+          heartbeat: "assets/renkai/audio/sfx/08_heartbeat.wav",
+          hit: "assets/renkai/audio/sfx/09_player_hit.wav",
+          wrong: "assets/renkai/audio/sfx/10_burst_fail.wav",
+          stack: "assets/renkai/audio/sfx/11_burst_stack.wav",
+          gameover: "assets/renkai/audio/sfx/99_voice_game_over.wav",
+          pause: "assets/renkai/audio/sfx/07_select_cancel.wav",
+        },
+      };
+
+      const media = {
+        titleBgm: new Audio(RENKAI_ASSETS.titleBgm),
+        battleBgm: new Audio(RENKAI_ASSETS.battleBgm),
+        pools: new Map(),
+        loops: new Map(),
+        unlocked: false,
+      };
+      media.titleBgm.loop = true;
+      media.battleBgm.loop = true;
+      media.titleBgm.preload = "auto";
+      media.battleBgm.preload = "auto";
+
+      const gestures = {
+        cameraReady: false,
+        tracking: false,
+        leftOpen: false,
+        rightOpen: false,
+        leftFist: false,
+        rightFist: false,
+        leftCursor: null,
+        rightCursor: null,
+        palmsFacingEachOther: false,
+        palmsForward: false,
+        leftHand: [],
+        rightHand: [],
+        previousLeftOpen: false,
+        previousRightOpen: false,
+        previousLeftFist: false,
+        previousRightFist: false,
+        leftTrail: [],
+        rightTrail: [],
+        videoStream: null,
+        landmarker: null,
+        raf: 0,
+        lastVideoTime: -1,
+      };
+
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const handCanvas = document.querySelector("#handOverlay");
+      const handCtx = handCanvas.getContext("2d");
+      const scoreEl = document.querySelector("#score");
+      const healthEl = document.querySelector("#health");
+      const comboEl = document.querySelector("#combo");
+      const burstEl = document.querySelector("#burst");
+      const overlay = document.querySelector("#overlay");
+      const reviewOverlay = document.querySelector("#reviewOverlay");
+      const reviewConfirmButton = document.querySelector("#reviewConfirmButton");
+      const feedback = document.querySelector("#feedback");
+      const feedbackTitle = document.querySelector("#feedbackTitle");
+      const feedbackBody = document.querySelector("#feedbackBody");
+      const choicePanel = document.querySelector("#choicePanel");
+      const choiceGrid = document.querySelector("#choiceGrid");
+      const choiceTitle = document.querySelector("#choiceTitle");
+      const teacherNote = document.querySelector("#teacherNote");
+      const cameraPreview = document.querySelector("#cameraPreview");
+      const cameraMode = document.querySelector("#cameraMode");
+      const gestureStatus = document.querySelector("#gestureStatus");
+      const chargeMeter = document.querySelector("#chargeMeter");
+      const chargeFill = document.querySelector("#chargeFill");
+      const hearts = document.querySelector("#hearts");
+      const settingsPanel = document.querySelector("#settingsPanel");
+      const lifeCount = document.querySelector("#lifeCount");
+      const lifeCountValue = document.querySelector("#lifeCountValue");
+      const bgmVolume = document.querySelector("#bgmVolume");
+      const bgmVolumeValue = document.querySelector("#bgmVolumeValue");
+      const sfxVolume = document.querySelector("#sfxVolume");
+      const sfxVolumeValue = document.querySelector("#sfxVolumeValue");
+      const cameraPreviewToggle = document.querySelector("#cameraPreviewToggle");
+      const pauseOverlay = document.querySelector("#pauseOverlay");
+      const burstGlyph = document.querySelector("#burstGlyph");
+
+      function loadPreferences() {
+        try {
+          Object.assign(preferences, JSON.parse(localStorage.getItem("prime-factor-defense-settings") || "{}"));
+        } catch {
+          // Keep the defaults when storage is unavailable or malformed.
+        }
+        preferences.bgmVolume = Math.min(1, Math.max(0, Number(preferences.bgmVolume) || 0));
+        preferences.sfxVolume = Math.min(1, Math.max(0, Number(preferences.sfxVolume) || 0));
+        preferences.maxHealth = Number(preferences.maxHealth) === 5 ? 5 : 10;
+        preferences.showCameraPreview = preferences.showCameraPreview !== false;
+        state.maxHealth = preferences.maxHealth;
+        state.health = preferences.maxHealth;
+        lifeCount.value = String(preferences.maxHealth);
+        bgmVolume.value = String(Math.round(preferences.bgmVolume * 100));
+        sfxVolume.value = String(Math.round(preferences.sfxVolume * 100));
+        cameraPreviewToggle.checked = preferences.showCameraPreview;
+        updateSettingsUi();
+      }
+
+      function savePreferences() {
+        try {
+          localStorage.setItem("prime-factor-defense-settings", JSON.stringify(preferences));
+        } catch {
+          // The game stays playable when browser storage is unavailable.
+        }
+      }
+
+      function updateSettingsUi() {
+        lifeCountValue.textContent = `${preferences.maxHealth} 條`;
+        bgmVolumeValue.textContent = `${Math.round(preferences.bgmVolume * 100)}%`;
+        sfxVolumeValue.textContent = `${Math.round(preferences.sfxVolume * 100)}%`;
+        setMediaVolumes();
+        cameraPreview.classList.toggle("hidden", !preferences.showCameraPreview);
+      }
+
+      function setMediaVolumes() {
+        media.titleBgm.volume = preferences.bgmVolume;
+        media.battleBgm.volume = preferences.bgmVolume;
+        media.pools.forEach((pool) => pool.forEach((audio) => { audio.volume = preferences.sfxVolume; }));
+        media.loops.forEach((audio) => { audio.volume = preferences.sfxVolume; });
+      }
+
+      function unlockAudio() {
+        if (media.unlocked) return Promise.resolve();
+        media.unlocked = true;
+        Object.entries(RENKAI_ASSETS.sfx).forEach(([name]) => getSfxPool(name));
+        setMediaVolumes();
+        return Promise.allSettled([media.titleBgm.load(), media.battleBgm.load()]).then(() => {});
+      }
+
+      function getSfxPool(name) {
+        if (media.pools.has(name)) return media.pools.get(name);
+        const src = RENKAI_ASSETS.sfx[name] || RENKAI_ASSETS.sfx.menu;
+        const pool = Array.from({ length: 3 }, () => {
+          const audio = new Audio(src);
+          audio.preload = "auto";
+          audio.volume = preferences.sfxVolume;
+          audio.load();
+          return audio;
+        });
+        media.pools.set(name, pool);
+        return pool;
+      }
+
+      function playSfx(name) {
+        if (preferences.sfxVolume <= 0) return;
+        const pool = getSfxPool(name);
+        const audio = pool.find((item) => item.paused || item.ended) || pool[0];
+        audio.currentTime = 0;
+        audio.volume = preferences.sfxVolume;
+        audio.play().catch(() => {});
+      }
+
+      function startLoop(name) {
+        if (media.loops.has(name) || preferences.sfxVolume <= 0) return;
+        const audio = new Audio(RENKAI_ASSETS.sfx[name] || RENKAI_ASSETS.sfx.menu);
+        audio.loop = name === "heartbeat";
+        audio.preload = "auto";
+        audio.volume = preferences.sfxVolume;
+        media.loops.set(name, audio);
+        audio.play().catch(() => {});
+      }
+
+      function stopLoop(name) {
+        const audio = media.loops.get(name);
+        if (!audio) return;
+        audio.pause();
+        audio.currentTime = 0;
+        media.loops.delete(name);
+      }
+
+      function startBattleBgm() {
+        media.titleBgm.pause();
+        media.titleBgm.currentTime = 0;
+        media.battleBgm.currentTime = 0;
+        media.battleBgm.volume = preferences.bgmVolume;
+        media.battleBgm.play().catch(() => {});
+      }
+
+      function stopBattleBgm() {
+        media.battleBgm.pause();
+        media.battleBgm.currentTime = 0;
+      }
+
+      function triggerBurstGlyph() {
+        burstGlyph.classList.remove("hidden");
+        burstGlyph.style.animation = "none";
+        burstGlyph.offsetHeight;
+        burstGlyph.style.animation = "";
+        window.setTimeout(() => burstGlyph.classList.add("hidden"), 900);
+      }
+
+      function renderHearts() {
+        hearts.replaceChildren();
+        for (let index = 0; index < state.maxHealth; index += 1) {
+          const heart = document.createElement("i");
+          heart.textContent = "♥";
+          heart.classList.toggle("alive", index < state.health);
+          heart.classList.toggle("lost", index >= state.health);
+          hearts.append(heart);
+        }
+      }
+
+      function setPaused(paused) {
+        if (paused && state.phase !== "playing") return;
+        state.phase = paused ? "paused" : "playing";
+        pauseOverlay.classList.toggle("hidden", !paused);
+        paused ? stopLoop("charge") : undefined;
+        playSfx("pause");
+        syncHud();
+      }
+
+      async function startCamera() {
+        if (gestures.cameraReady) return true;
+        if (!navigator.mediaDevices?.getUserMedia) {
+          gestureStatus.textContent = "此瀏覽器不支援鏡頭，已保留鍵盤模式。";
+          return false;
+        }
+        try {
+          gestureStatus.textContent = "正在載入 MediaPipe 體感模組...";
+          const [{ FilesetResolver, HandLandmarker }, stream] = await Promise.all([
+            import("./vision_bundle.js"),
+            navigator.mediaDevices.getUserMedia({
+              video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+              audio: false,
+            }),
+          ]);
+          gestures.videoStream = stream;
+          cameraPreview.srcObject = stream;
+          await cameraPreview.play();
+          const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm");
+          gestures.landmarker = await HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+              delegate: "GPU",
+            },
+            runningMode: "VIDEO",
+            numHands: 2,
+            minHandDetectionConfidence: 0.55,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          });
+          gestures.cameraReady = true;
+          cameraMode.textContent = "體感模式";
+          gestureStatus.textContent = "鏡頭已啟用：雙手張開裂解，握拳開選單。";
+          gestures.raf = requestAnimationFrame(readGestures);
+          return true;
+        } catch (error) {
+          console.warn(error);
+          gestures.videoStream?.getTracks().forEach((track) => track.stop());
+          gestures.videoStream = null;
+          gestures.landmarker = null;
+          gestures.cameraReady = false;
+          cameraMode.textContent = "鍵盤模式";
+          gestureStatus.textContent = "鏡頭未啟用，仍可用鍵盤和按鈕操作。";
+          return false;
+        }
+      }
+
+      function readGestures(time) {
+        const video = cameraPreview;
+        const landmarker = gestures.landmarker;
+        if (video.readyState >= 2 && landmarker && video.currentTime !== gestures.lastVideoTime) {
+          gestures.lastVideoTime = video.currentTime;
+          const result = landmarker.detectForVideo(video, time);
+          let leftRaw = [];
+          let rightRaw = [];
+          Object.assign(gestures, {
+            tracking: result.landmarks.length > 0,
+            leftOpen: false,
+            rightOpen: false,
+            leftFist: false,
+            rightFist: false,
+            leftCursor: null,
+            rightCursor: null,
+            leftHand: [],
+            rightHand: [],
+          });
+          result.landmarks.forEach((landmarks, index) => {
+            const hand = result.handedness[index]?.[0]?.categoryName?.toLowerCase();
+            const mirrored = landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z || 0 }));
+            const cursor = { x: 1 - landmarks[8].x, y: landmarks[8].y };
+            if (hand === "left") {
+              leftRaw = landmarks;
+              gestures.leftHand = mirrored;
+              gestures.leftOpen = isOpenHand(landmarks);
+              gestures.leftFist = isFist(landmarks);
+              gestures.leftCursor = cursor;
+            } else if (hand === "right") {
+              rightRaw = landmarks;
+              gestures.rightHand = mirrored;
+              gestures.rightOpen = isOpenHand(landmarks);
+              gestures.rightFist = isFist(landmarks);
+              gestures.rightCursor = cursor;
+            }
+          });
+          const bothTracked = leftRaw.length >= 21 && rightRaw.length >= 21 && !gestures.leftFist && !gestures.rightFist;
+          gestures.palmsFacingEachOther = bothTracked && palmsFacingEachOther(leftRaw, rightRaw);
+          gestures.palmsForward = bothTracked && palmsForward(leftRaw, rightRaw);
+          applyGestureActions(time);
+          updateGestureStatus();
+        }
+        gestures.raf = requestAnimationFrame(readGestures);
+      }
+
+      function applyGestureActions(time) {
+        if (state.phase === "review") {
+          trackReviewConfirmGesture(time);
+          gestures.previousLeftOpen = gestures.leftOpen;
+          gestures.previousRightOpen = gestures.rightOpen;
+          gestures.previousLeftFist = gestures.leftFist;
+          gestures.previousRightFist = gestures.rightFist;
+          return;
+        }
+        if (state.phase !== "playing") return;
+        trackPrimeGateHands(time);
+        if (state.target?.isPrimeGate) {
+          handleGestureBurst(time);
+          gestures.previousLeftOpen = gestures.leftOpen;
+          gestures.previousRightOpen = gestures.rightOpen;
+          gestures.previousLeftFist = gestures.leftFist;
+          gestures.previousRightFist = gestures.rightFist;
+          return;
+        }
+        const openedBothHands =
+          gestures.leftOpen &&
+          gestures.rightOpen &&
+          (!gestures.previousLeftOpen || !gestures.previousRightOpen) &&
+          !gestures.palmsFacingEachOther;
+        if (openedBothHands) splitTarget();
+
+        if (!state.choicesOpen && !(gestures.leftFist && gestures.rightFist)) {
+          if (gestures.leftFist && !gestures.previousLeftFist && !gestures.rightFist) openChoices("left");
+          if (gestures.rightFist && !gestures.previousRightFist && !gestures.leftFist) openChoices("right");
+        }
+
+        if (state.choicesOpen) trackGestureChoice(time);
+        handleGestureBurst(time);
+        gestures.previousLeftOpen = gestures.leftOpen;
+        gestures.previousRightOpen = gestures.rightOpen;
+        gestures.previousLeftFist = gestures.leftFist;
+        gestures.previousRightFist = gestures.rightFist;
+      }
+
+      function trackReviewConfirmGesture(time) {
+        const cursors = [gestures.leftCursor, gestures.rightCursor].filter(Boolean);
+        const rect = reviewConfirmButton.getBoundingClientRect();
+        const hovering = cursors.some((cursor) => {
+          const x = cursor.x * window.innerWidth;
+          const y = cursor.y * window.innerHeight;
+          return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        });
+        reviewConfirmButton.classList.toggle("active", hovering);
+        if (!hovering) {
+          state.reviewHoverSince = 0;
+          return;
+        }
+        if (!state.reviewHoverSince) {
+          state.reviewHoverSince = time;
+          playSfx("select");
+        }
+        if (time - state.reviewHoverSince >= REVIEW_CONFIRM_HOVER_MS) {
+          state.reviewHoverSince = 0;
+          confirmPrimeReview();
+        }
+      }
+
+      function trackPrimeGateHands(time) {
+        if (!state.target || state.choicesOpen) return;
+        const leftPrimeZone = isCursorInGateZone(gestures.leftCursor, 0.24, GATE_CENTER_Y_RATIO);
+        const rightNonPrimeZone = isCursorInGateZone(gestures.rightCursor, 0.76, GATE_CENTER_Y_RATIO);
+        const choice = leftPrimeZone ? true : rightNonPrimeZone ? false : null;
+        if (choice == null) {
+          state.gateHover = null;
+          state.gateHoverSince = 0;
+          return;
+        }
+        if (state.gateHover !== choice) {
+          state.gateHover = choice;
+          state.gateHoverSince = time;
+          playSfx("select");
+        }
+        if (time - state.gateHoverSince >= GATE_HOVER_MS) {
+          state.gateHover = null;
+          state.gateHoverSince = 0;
+          answerPrimeGate(choice);
+        }
+      }
+
+      function isCursorInGateZone(cursor, centerX, centerY) {
+        if (!cursor) return false;
+        const dx = cursor.x - centerX;
+        const dy = cursor.y - centerY;
+        return Math.hypot(dx, dy) <= GATE_RADIUS_RATIO;
+      }
+
+      function trackGestureChoice(time) {
+        const cursor = state.menuHand === "left" ? gestures.rightCursor : gestures.leftCursor;
+        if (!cursor) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          return;
+        }
+        const element = document
+          .elementFromPoint(cursor.x * window.innerWidth, cursor.y * window.innerHeight)
+          ?.closest("[data-choice]");
+        const rawChoice = element?.dataset.choice;
+        const value = rawChoice == null ? NaN : Number(rawChoice);
+        if (Number.isNaN(value)) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          choiceGrid.querySelectorAll("button").forEach((button) => button.classList.remove("active"));
+          return;
+        }
+        if (state.hoverChoice !== value) {
+          state.hoverChoice = value;
+          state.hoverSince = time;
+          playSfx("select");
+        }
+        choiceGrid.querySelectorAll("button").forEach((button) => {
+          button.classList.toggle("active", Number(button.dataset.choice) === value);
+        });
+        if (time - state.hoverSince >= 520) {
+          state.hoverChoice = null;
+          state.hoverSince = 0;
+          element.click();
+        }
+      }
+
+      function handleGestureBurst(time) {
+        if (state.burst <= 0) return;
+        if (gestures.palmsFacingEachOther) {
+          if (!state.chargeStartedAt) startLoop("charge");
+          state.chargeStartedAt ||= time;
+          state.chargeLostAt = 0;
+          state.chargeProgress = Math.min((time - state.chargeStartedAt) / 1200, 1);
+          state.burstArmed = state.chargeProgress >= 1;
+          if (state.burstArmed) state.burstReleaseGraceUntil = time + 900;
+        } else if (state.burstArmed && gestures.palmsForward) {
+          stopLoop("charge");
+          useBurst();
+          state.chargeStartedAt = 0;
+          state.chargeLostAt = 0;
+          state.chargeProgress = 0;
+          state.burstArmed = false;
+          state.burstReleaseGraceUntil = 0;
+        } else if (state.burstArmed && time <= state.burstReleaseGraceUntil) {
+          state.chargeProgress = 1;
+        } else if (state.chargeStartedAt) {
+          state.chargeLostAt ||= time;
+          if (time - state.chargeLostAt > 520) {
+            stopLoop("charge");
+            state.chargeStartedAt = 0;
+            state.chargeLostAt = 0;
+            state.chargeProgress = 0;
+            state.burstArmed = false;
+            state.burstReleaseGraceUntil = 0;
+          }
+        }
+        chargeMeter.classList.toggle("hidden", state.chargeProgress <= 0);
+        chargeFill.style.width = `${state.chargeProgress * 100}%`;
+      }
+
+      function updateGestureStatus() {
+        if (!gestures.cameraReady) return;
+        if (!gestures.tracking) {
+          gestureStatus.textContent = "等待手部進入鏡頭。";
+        } else if (gestures.palmsFacingEachOther) {
+          gestureStatus.textContent = state.burstArmed ? "聚爆完成，雙掌向前推出。" : "聚爆集氣中。";
+        } else if (state.burstArmed) {
+          gestureStatus.textContent = "聚爆完成，雙掌向鏡頭推出。";
+        } else if (state.choicesOpen) {
+          gestureStatus.textContent = "用另一手指向答案，停留半秒作答。";
+        } else if (gestures.leftFist || gestures.rightFist) {
+          gestureStatus.textContent = "偵測到握拳：開啟選單。";
+        } else if (gestures.leftOpen && gestures.rightOpen) {
+          gestureStatus.textContent = "偵測到雙手張開：裂解合數。";
+        } else {
+          gestureStatus.textContent = "體感待命中。";
+        }
+      }
+
+      function isPrime(number) {
+        if (!Number.isInteger(number) || number < 2) return false;
+        for (let divisor = 2; divisor * divisor <= number; divisor += 1) {
+          if (number % divisor === 0) return false;
+        }
+        return true;
+      }
+
+      function factorize(number) {
+        const factors = [];
+        let remainder = number;
+        for (let divisor = 2; divisor <= remainder; divisor += 1) {
+          while (remainder % divisor === 0) {
+            factors.push(divisor);
+            remainder /= divisor;
+          }
+        }
+        return factors;
+      }
+
+      function getDifficultyPool(level) {
+        const max = level === "easy" ? 30 : level === "challenge" ? 100 : 60;
+        return Array.from({ length: max - 1 }, (_, index) => index + 2);
+      }
+
+      function seededRank(seed, value) {
+        let hash = 2166136261;
+        const text = `${seed}:${value}`;
+        for (let index = 0; index < text.length; index += 1) {
+          hash ^= text.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      async function startPrimeReview() {
+        await unlockAudio();
+        playSfx("menu");
+        await startCamera();
+        state.phase = "review";
+        state.reviewHoverSince = 0;
+        overlay.classList.add("hidden");
+        reviewOverlay.classList.remove("hidden");
+        teacherNote.textContent = "複習 100 以內的 25 個質數，確認後開始第一關挑戰。";
+        showFeedback("質數複習", PRIME_REVIEW_TEXT, 3600);
+      }
+
+      async function confirmPrimeReview() {
+        if (state.phase !== "review" && state.phase !== "intro") return;
+        await startGame();
+      }
+
+      async function startGame() {
+        await unlockAudio();
+        playSfx("start");
+        startBattleBgm();
+        await startCamera();
+        Object.assign(state, {
+          phase: "playing",
+          score: 0,
+          health: preferences.maxHealth,
+          maxHealth: preferences.maxHealth,
+          combo: 0,
+          streak: 0,
+          burst: 2,
+          target: null,
+          primeGateCorrect: 0,
+          gateHover: null,
+          gateHoverSince: 0,
+          choicesOpen: false,
+          menuHand: null,
+          hoverChoice: null,
+          hoverSince: 0,
+          reviewHoverSince: 0,
+          chargeStartedAt: 0,
+          chargeLostAt: 0,
+          chargeProgress: 0,
+          burstArmed: false,
+          burstReleaseGraceUntil: 0,
+          particles: [],
+          rings: [],
+          nextSpawnAt: performance.now() + 300,
+        });
+        overlay.classList.add("hidden");
+        reviewOverlay.classList.add("hidden");
+        reviewConfirmButton.classList.remove("active");
+        closeChoices();
+        showFeedback("質數守門", `${PRIME_REVIEW_TEXT} 左手判質數，右手判非質數；答對 ${PRIME_GATE_GOAL} 題過關。`, 4200);
+        syncHud();
+      }
+
+      function spawnTarget() {
+        const pool = Array.from({ length: 100 }, (_, index) => index + 1);
+        const number = pool[Math.floor(Math.random() * pool.length)];
+        state.target = {
+          id: Date.now() + Math.random(),
+          number,
+          progress: 0,
+          isPrimeGate: true,
+        };
+        teacherNote.textContent = `第一關：質數守門。左手選質數，右手選非質數；已答對 ${state.primeGateCorrect}/${PRIME_GATE_GOAL} 題。`;
+            addRing(AURORA.leftHand, 1);
+      }
+
+      function splitTarget() {
+        answerPrimeGate(true);
+      }
+
+      function openChoices(menuHand = "left") {
+        if (state.target?.isPrimeGate) {
+          answerPrimeGate(false);
+          return;
+        }
+        const target = state.target;
+        if (!target || state.choicesOpen) return;
+        const branch = getBranchForHand(target, menuHand);
+        if (!branch) {
+          playSfx("cancel");
+          showFeedback("分解完成", "這棵樹的所有分支都是質數。", 1200);
+          return;
+        }
+        state.choicesOpen = true;
+        state.menuHand = menuHand;
+        target.activeBranchId = branch.id;
+        state.hoverChoice = null;
+        state.hoverSince = 0;
+        const pairs = getFactorPairs(branch.value);
+        choicePanel.className = `magic-menu choice-count-${Math.min(5, Math.max(2, pairs.length))}`;
+        choiceTitle.textContent = `裂解 ${branch.value}：選一組因數對`;
+        choiceGrid.replaceChildren();
+        pairs.forEach((pair, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = `${pair[0]} × ${pair[1]}`;
+          button.dataset.choice = String(index);
+          button.addEventListener("click", () => answer(pair));
+          button.setAttribute("aria-label", `因數對 ${index + 1}，${pair[0]} 乘 ${pair[1]}`);
+          choiceGrid.append(button);
+        });
+        choicePanel.classList.remove("hidden");
+        playSfx("menu");
+      }
+
+      function closeChoices() {
+        state.choicesOpen = false;
+        state.menuHand = null;
+        state.hoverChoice = null;
+        state.hoverSince = 0;
+        choicePanel.classList.add("hidden");
+      }
+
+      function getActiveBranch(target) {
+        const active = target.branches.find((branch) => branch.id === target.activeBranchId);
+        if (active && !isPrime(active.value)) return active;
+        return target.branches.find((branch) => !isPrime(branch.value)) || null;
+      }
+
+      function getBranchForHand(target, hand) {
+        const desiredSide = hand === "right" ? "right" : "left";
+        return target.branches.find((branch) => branch.side === desiredSide && !isPrime(branch.value))
+          || getActiveBranch(target);
+      }
+
+      function answer(pair) {
+        const target = state.target;
+        const branch = target && getActiveBranch(target);
+        if (!target || !branch) return;
+        closeChoices();
+        const nextBranches = applyFactorPair(target.branches, branch.id, pair);
+        const newPrimes = nextBranches.filter((item) => item.id.startsWith(branch.id) && isPrime(item.value));
+        const nextComposite = nextBranches.find((item) => !isPrime(item.value));
+        state.target = nextComposite ? { ...target, branches: nextBranches, activeBranchId: nextComposite.id } : null;
+        playSfx("correct");
+        state.score += Math.max(1, newPrimes.length);
+        state.combo += 1;
+        state.streak += newPrimes.length;
+        burstParticles(width() / 2, height() * 0.5, AURORA.correct, 20 + newPrimes.length * 12);
+        addRing(AURORA.correct, 0.8);
+        if (!nextComposite) {
+          state.nextSpawnAt = performance.now() + 520;
+          state.score += 2;
+          showFeedback("整棵樹完成", `${target.number} 已全部化為質數防線。`, 1800);
+        } else {
+          playSfx("split");
+          showFeedback("分支裂解", `${branch.value} = ${pair[0]} × ${pair[1]}，還有合數分支需要處理。`, 1700);
+        }
+        if (state.streak >= 5) {
+          playSfx("stack");
+          state.burst += 1;
+          state.streak -= 5;
+          showFeedback("聚爆補充", "連續答對累積 5 格，獲得 1 次聚爆。", 1600);
+        }
+        syncHud();
+      }
+
+      function answerPrimeGate(choosePrime) {
+        const target = state.target;
+        if (!target || !target.isPrimeGate || state.phase !== "playing") return;
+        const number = target.number;
+        const correct = isPrime(number) === choosePrime;
+        state.target = null;
+        state.nextSpawnAt = performance.now() + (correct ? 520 : 780);
+        closeChoices();
+        if (correct) {
+          playSfx("correct");
+          state.score += 1;
+          state.primeGateCorrect += 1;
+          state.combo += 1;
+          state.streak += 1;
+          burstParticles(width() / 2, height() * 0.5, AURORA.correct, 34);
+          addRing(AURORA.correct, 0.9);
+          showFeedback("判斷正確", `${number} ${isPrime(number) ? "是質數" : "不是質數"}。`, 1300);
+          if (state.streak >= 5) {
+            playSfx("stack");
+            state.burst = Math.min(3, state.burst + 1);
+            state.streak -= 5;
+            showFeedback("聚爆補充", "連續答對 5 題，獲得 1 次聚爆。", 1500);
+          }
+          if (state.primeGateCorrect >= PRIME_GATE_GOAL) completePrimeGate();
+        } else {
+          state.health -= 1;
+          playSfx("wrong");
+          state.combo = 0;
+          state.streak = 0;
+          addRing(AURORA.danger, 1);
+          showFeedback("判斷錯誤", getPrimeGateHint(number), 2200);
+          if (state.health <= 0) endGame();
+        }
+        syncHud();
+      }
+
+      function getPrimeGateHint(number) {
+        if (number === 1) return "1 只有一個正因數，所以不是質數。";
+        if (isPrime(number)) return `${number} 只有 1 和 ${number} 兩個正因數。`;
+        const pair = getFactorPairs(number)[0];
+        return pair ? `${number} = ${pair[0]} × ${pair[1]}，所以不是質數。` : `${number} 不是質數。`;
+      }
+
+      function completePrimeGate() {
+        stopBattleBgm();
+        playSfx("stack");
+        state.phase = "clear";
+        state.target = null;
+        closeChoices();
+        overlay.classList.remove("hidden");
+        overlay.querySelector("h2").textContent = "質數守門通過";
+        overlay.querySelector("p").textContent = `答對 ${PRIME_GATE_GOAL} 題。進入下一關：合數破陣。`;
+        overlay.querySelector("#startButton").textContent = "再玩一次第一關";
+      }
+
+      function useBurst() {
+        if (!state.target || state.burst <= 0) {
+          playSfx("cancel");
+          return;
+        }
+        state.burst -= 1;
+        state.target = null;
+        state.gateHover = null;
+        state.gateHoverSince = 0;
+        state.nextSpawnAt = performance.now() + 560;
+        closeChoices();
+        stopLoop("charge");
+        playSfx("burst");
+        triggerBurstGlyph();
+            burstParticles(width() / 2, height() * 0.5, AURORA.rightHand, 90);
+            addRing(AURORA.rightHand, 1.35);
+        showFeedback("聚爆跳過", "已清除目前題目。這題不加分，也不算答對。", 1500);
+        syncHud();
+      }
+
+      function missTarget() {
+        state.health -= 1;
+        playSfx("hit");
+        state.combo = 0;
+        state.streak = 0;
+        const missed = state.target;
+        state.target = null;
+        state.nextSpawnAt = performance.now() + 520;
+        closeChoices();
+            addRing(AURORA.danger, 1);
+        showFeedback("防線受損", missed ? `${missed.number} 尚未完成質數判斷。` : "數字突破了防線。", 2200);
+        if (state.health <= 0) endGame();
+        syncHud();
+      }
+
+      function endGame() {
+        stopBattleBgm();
+        playSfx("gameover");
+        state.phase = "gameover";
+        overlay.classList.remove("hidden");
+        overlay.querySelector("h2").textContent = "防線崩解";
+        overlay.querySelector("p").textContent = `已答對 ${state.primeGateCorrect} 題。重新複習 100 以內質數後再挑戰。`;
+        overlay.querySelector("#startButton").textContent = "重新開始";
+      }
+
+      function showFeedback(title, body, duration) {
+        state.feedbackUntil = performance.now() + duration;
+        state.feedbackTitle = title;
+        state.feedbackBody = body;
+        feedbackTitle.textContent = title;
+        feedbackBody.textContent = body;
+        feedback.classList.remove("hidden");
+      }
+
+      function syncHud() {
+        scoreEl.textContent = state.score;
+        healthEl.textContent = state.health;
+        renderHearts();
+        comboEl.textContent = state.combo;
+        burstEl.textContent = state.burst;
+        document.querySelector("#splitButton").disabled = state.phase !== "playing";
+        document.querySelector("#menuButton").disabled = state.phase !== "playing";
+        document.querySelector("#burstButton").disabled = state.phase !== "playing" || state.burst <= 0;
+        document.querySelector("#pauseButton").disabled = state.phase !== "playing";
+      }
+
+      function width() {
+        return canvas.getBoundingClientRect().width;
+      }
+
+      function height() {
+        return canvas.getBoundingClientRect().height;
+      }
+
+      function addRing(color, scale) {
+        state.rings.push({ x: width() / 2, y: height() * 0.5, life: 1, color, scale });
+      }
+
+      function burstParticles(x, y, color, count) {
+        for (let index = 0; index < count; index += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 60 + Math.random() * 260;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 2 + Math.random() * 5,
+            life: 0.45 + Math.random() * 0.85,
+            maxLife: 1.2,
+            color,
+          });
+        }
+      }
+
+      function draw(time) {
+        resizeCanvas();
+        const delta = Math.min((time - state.lastTime) / 1000, 0.05);
+        state.lastTime = time;
+        update(time, delta);
+        paint(time, delta);
+        requestAnimationFrame(draw);
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const nextWidth = Math.max(1, Math.round(rect.width * ratio));
+        const nextHeight = Math.max(1, Math.round(rect.height * ratio));
+        if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+          canvas.width = nextWidth;
+          canvas.height = nextHeight;
+        }
+        if (handCanvas.width !== nextWidth || handCanvas.height !== nextHeight) {
+          handCanvas.width = nextWidth;
+          handCanvas.height = nextHeight;
+        }
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        handCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function update(time, delta) {
+        if (state.phase === "playing") {
+          if (!state.target && time >= state.nextSpawnAt) spawnTarget();
+          if (state.target) {
+            state.target.progress += (0.075 + Math.min(state.score * 0.004, 0.12)) * delta;
+            if (state.target.progress >= 1) missTarget();
+          }
+        }
+        state.particles.forEach((particle) => {
+          particle.x += particle.vx * delta;
+          particle.y += particle.vy * delta;
+          particle.vx *= 0.986;
+          particle.vy *= 0.986;
+          particle.life -= delta;
+        });
+        state.rings.forEach((ring) => {
+          ring.life -= delta * 0.9;
+        });
+        state.particles = state.particles.filter((particle) => particle.life > 0);
+        state.rings = state.rings.filter((ring) => ring.life > 0);
+        if (state.feedbackUntil && time > state.feedbackUntil) {
+          feedback.classList.add("hidden");
+          state.feedbackUntil = 0;
+        }
+      }
+
+      function paint(time) {
+        const w = width();
+        const h = height();
+        ctx.clearRect(0, 0, w, h);
+        handCtx.clearRect(0, 0, w, h);
+        drawBoard(w, h, time);
+        drawTarget(w, h, time);
+        drawHands(w, h, time);
+        drawParticles();
+      }
+
+      function drawBoard(w, h, time) {
+        const centerX = w / 2;
+        const centerY = h * 0.5;
+        ctx.save();
+        ctx.strokeStyle = "rgba(143, 247, 255, 0.14)";
+        ctx.lineWidth = 2;
+        for (let radius = 90; radius < Math.min(w, h) * 0.62; radius += 58) {
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius + Math.sin(time * 0.001 + radius) * 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = AURORA.board;
+        for (let index = 0; index < 12; index += 1) {
+          const angle = (index / 12) * Math.PI * 2 + time * 0.00008;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(centerX + Math.cos(angle) * w, centerY + Math.sin(angle) * h);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawTarget(w, h, time) {
+        const target = state.target;
+        if (!target) return;
+        const centerX = w / 2;
+        const centerY = h * 0.5;
+        if (target.isPrimeGate) {
+          drawPrimeGateTarget(target, w, h, time);
+          return;
+        }
+        const approachScale = 0.52 + target.progress * 1.95;
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(approachScale, approachScale);
+        const branchCount = target.branches.length;
+        const spacing = branchCount === 1 ? 0 : Math.min(118, 420 / Math.max(1, branchCount - 1));
+        target.branches.forEach((branch, index) => {
+          const x = (index - (branchCount - 1) / 2) * spacing;
+          const y = branchCount > 4 ? (index % 2 ? 54 : -54) : Math.sin(index * 1.8) * 42;
+          const active = branch.id === target.activeBranchId;
+          drawNumberNode(branch.value, x, y, branchCount > 5 ? 25 : 34, active, time, isPrime(branch.value));
+        });
+        drawCenterLabel(`${target.number} 的分解樹`);
+        ctx.restore();
+        drawProgress(centerX, centerY, target.progress);
+      }
+
+      function drawPrimeGateTarget(target, w, h, time) {
+        const centerX = w / 2;
+        const centerY = h * 0.5;
+        const gateY = h * GATE_CENTER_Y_RATIO;
+        const approachScale = 0.72 + target.progress * 1.35;
+        drawPrimeChoiceZone(w * 0.24, gateY, "質數", AURORA.leftHand, state.gateHover === true, time);
+        drawPrimeChoiceZone(w * 0.76, gateY, "非質數", AURORA.rightHand, state.gateHover === false, time);
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(approachScale, approachScale);
+        drawNumberNode(target.number, 0, 0, 56, true, time, isPrime(target.number));
+        drawCenterLabel(`第 1 關：${state.primeGateCorrect}/${PRIME_GATE_GOAL}`);
+        ctx.restore();
+        drawProgress(centerX, centerY, target.progress);
+      }
+
+      function drawPrimeChoiceZone(x, y, label, color, active, time) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.globalAlpha = active ? 0.95 : 0.52;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = "rgba(3, 10, 20, 0.44)";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = active ? 34 : 18;
+        ctx.lineWidth = active ? 5 : 3;
+        for (let index = 0; index < 3; index += 1) {
+          ctx.beginPath();
+          ctx.arc(0, 0, 56 + index * 14 + Math.sin(time * 0.002 + index) * 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(0, 0, 66, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = '900 24px "Microsoft JhengHei", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, 0, 0);
+        ctx.fillStyle = "rgba(233, 251, 255, 0.78)";
+        ctx.font = '700 11px "Microsoft JhengHei", sans-serif';
+        ctx.fillText(active ? "判定中" : "停留半秒", 0, 30);
+        ctx.restore();
+      }
+
+      function drawNumberNode(number, x, y, radius, active, time, prime = false) {
+        const color = active ? AURORA.gold : prime ? AURORA.correct : AURORA.danger;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.sin(time * 0.0012 + number) * 0.04);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = active ? 28 : 16;
+        ctx.fillStyle = "rgba(4, 19, 24, 0.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = active ? 5 : 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = AURORA.ink;
+        ctx.font = `800 ${radius * 0.72}px "Microsoft JhengHei", sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(number, 0, 1);
+        if (active) {
+            ctx.strokeStyle = AURORA.gold;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 7]);
+          ctx.beginPath();
+          ctx.arc(0, 0, radius + 12, time * 0.002, time * 0.002 + Math.PI * 1.6);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawCenterLabel(text) {
+        ctx.save();
+        ctx.fillStyle = "rgba(233, 247, 247, 0.82)";
+        ctx.font = '700 18px "Microsoft JhengHei", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 0, 26);
+        ctx.restore();
+      }
+
+      function drawProgress(x, y, progress) {
+        ctx.save();
+        ctx.strokeStyle = progress > 0.75 ? AURORA.danger : AURORA.leftHand;
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(x, y, 168, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawParticles() {
+        state.particles.forEach((particle) => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+          ctx.fillStyle = particle.color;
+          ctx.shadowColor = particle.color;
+          ctx.shadowBlur = 14;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+        state.rings.forEach((ring) => {
+          const fade = Math.max(0, ring.life);
+          ctx.save();
+          ctx.globalAlpha = fade;
+          ctx.strokeStyle = ring.color;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(ring.x, ring.y, (1.05 - fade) * 280 * ring.scale, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
+      function drawHands(w, h, time) {
+        handCtx.save();
+        handCtx.globalCompositeOperation = "lighter";
+        drawBurstChargeAura(handCtx, w, h, time);
+        drawHandSkeleton(handCtx, gestures.leftHand, AURORA.leftHand, "左手", w, h, time, gestures.leftTrail);
+        drawHandSkeleton(handCtx, gestures.rightHand, AURORA.rightHand, "右手", w, h, time, gestures.rightTrail);
+        handCtx.restore();
+      }
+
+      function drawHandSkeleton(drawing, landmarks, color, label, w, h, time, trail) {
+        if (!Array.isArray(landmarks) || landmarks.length < 21) return;
+        const links = [
+          [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+          [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15],
+          [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17],
+        ];
+        const point = (index) => ({ x: landmarks[index].x * w, y: landmarks[index].y * h });
+        const palm = getPalmPoint(landmarks, w, h);
+        recordGestureTrail(trail, point(8), point(12), palm, time);
+        drawing.save();
+        drawGestureTrailParticles(drawing, trail, color, time);
+        drawPalmGlow(drawing, palm, color, time);
+        drawing.globalAlpha = 0.82;
+        drawing.strokeStyle = color;
+        drawing.fillStyle = color;
+        drawing.lineWidth = 2.4;
+        drawing.lineCap = "round";
+        drawing.lineJoin = "round";
+        drawing.shadowColor = color;
+        drawing.shadowBlur = 16;
+        links.forEach(([from, to]) => {
+          const a = point(from);
+          const b = point(to);
+          drawing.beginPath();
+          drawing.moveTo(a.x, a.y);
+          drawing.lineTo(b.x, b.y);
+          drawing.stroke();
+        });
+        drawFingerLights(drawing, landmarks, point, color, time);
+        const wrist = point(0);
+        drawing.globalAlpha = 0.9;
+        drawing.font = '700 13px "Microsoft JhengHei", sans-serif';
+        drawing.fillText(label, wrist.x + 12, wrist.y + Math.sin(time * 0.004) * 3 - 10);
+        drawing.restore();
+      }
+
+      function getPalmPoint(landmarks, w, h) {
+        const indexes = [0, 5, 9, 13, 17];
+        return indexes.reduce(
+          (sum, index) => ({ x: sum.x + landmarks[index].x * w / indexes.length, y: sum.y + landmarks[index].y * h / indexes.length }),
+          { x: 0, y: 0 },
+        );
+      }
+
+      function recordGestureTrail(trail, indexTip, middleTip, palm, time) {
+        if (!Array.isArray(trail)) return;
+        const previous = trail.at(-1);
+        const moved = !previous || Math.hypot(indexTip.x - previous.x, indexTip.y - previous.y) > 3.5;
+        if (moved) {
+          trail.push({
+            x: indexTip.x,
+            y: indexTip.y,
+            mx: middleTip.x,
+            my: middleTip.y,
+            px: palm.x,
+            py: palm.y,
+            time,
+          });
+        }
+        while (trail.length > 18 || (trail[0] && time - trail[0].time > 520)) trail.shift();
+      }
+
+      function drawGestureTrailParticles(drawing, trail, color, time) {
+        if (!Array.isArray(trail) || trail.length < 2) return;
+        trail.forEach((spot, index) => {
+          const age = Math.max(0, time - spot.time);
+          const fade = Math.max(0, 1 - age / 520) * ((index + 1) / trail.length);
+          if (fade <= 0) return;
+          drawing.save();
+          drawing.globalAlpha = fade * 0.58;
+          drawing.fillStyle = color;
+          drawing.shadowColor = color;
+          drawing.shadowBlur = 18 + fade * 22;
+          drawing.beginPath();
+          drawing.arc(spot.x, spot.y, 2.2 + fade * 4.2, 0, Math.PI * 2);
+          drawing.fill();
+          drawing.globalAlpha = fade * 0.24;
+          drawing.beginPath();
+          drawing.arc(spot.mx, spot.my, 1.6 + fade * 3.2, 0, Math.PI * 2);
+          drawing.fill();
+          drawing.restore();
+        });
+      }
+
+      function drawPalmGlow(drawing, palm, color, time) {
+        const pulse = 0.72 + Math.sin(time * 0.006) * 0.18;
+        const radius = 26 + pulse * 9 + state.chargeProgress * 20;
+        const gradient = drawing.createRadialGradient(palm.x, palm.y, 0, palm.x, palm.y, radius);
+        gradient.addColorStop(0, "rgba(255, 255, 255, 0.72)");
+        gradient.addColorStop(0.24, color);
+        gradient.addColorStop(1, "rgba(100, 236, 255, 0)");
+        drawing.save();
+        drawing.globalAlpha = 0.36 + state.chargeProgress * 0.42;
+        drawing.fillStyle = gradient;
+        drawing.shadowColor = color;
+        drawing.shadowBlur = 32 + state.chargeProgress * 26;
+        drawing.beginPath();
+        drawing.arc(palm.x, palm.y, radius, 0, Math.PI * 2);
+        drawing.fill();
+        drawing.restore();
+      }
+
+      function drawFingerLights(drawing, landmarks, point, color, time) {
+        const tips = [4, 8, 12, 16, 20];
+        landmarks.forEach((_, index) => {
+          const p = point(index);
+          const isTip = tips.includes(index);
+          drawing.save();
+          drawing.globalAlpha = isTip ? 0.96 : 0.76;
+          drawing.fillStyle = isTip ? "#f8feff" : color;
+          drawing.shadowColor = color;
+          drawing.shadowBlur = isTip ? 26 : 12;
+          drawing.beginPath();
+          drawing.arc(p.x, p.y, isTip ? 5.6 + Math.sin(time * 0.008 + index) * 1.2 : index === 0 || index === 9 ? 4.6 : 3.1, 0, Math.PI * 2);
+          drawing.fill();
+          if (isTip) {
+            drawing.globalAlpha = 0.26;
+            drawing.strokeStyle = color;
+            drawing.lineWidth = 1.6;
+            drawing.beginPath();
+            drawing.arc(p.x, p.y, 12 + Math.sin(time * 0.006 + index) * 2.4, 0, Math.PI * 2);
+            drawing.stroke();
+          }
+          drawing.restore();
+        });
+      }
+
+      function drawBurstChargeAura(drawing, w, h, time) {
+        if (state.chargeProgress <= 0) return;
+        const hands = [gestures.leftHand, gestures.rightHand].filter((hand) => Array.isArray(hand) && hand.length >= 21);
+        if (!hands.length) return;
+        const palms = hands.map((hand) => getPalmPoint(hand, w, h));
+        const center = palms.reduce((sum, palm) => ({ x: sum.x + palm.x / palms.length, y: sum.y + palm.y / palms.length }), { x: 0, y: 0 });
+        const pulse = 1 + Math.sin(time * 0.012) * 0.08;
+        drawing.save();
+        drawing.globalAlpha = 0.22 + state.chargeProgress * 0.48;
+        drawing.strokeStyle = AURORA.gold;
+        drawing.fillStyle = "rgba(255, 227, 148, 0.18)";
+        drawing.shadowColor = AURORA.gold;
+        drawing.shadowBlur = 34 + state.chargeProgress * 42;
+        palms.forEach((palm) => {
+          drawing.beginPath();
+          drawing.arc(palm.x, palm.y, (34 + state.chargeProgress * 42) * pulse, 0, Math.PI * 2);
+          drawing.stroke();
+          drawing.beginPath();
+          drawing.moveTo(palm.x, palm.y);
+          drawing.lineTo(center.x, center.y);
+          drawing.stroke();
+        });
+        drawing.beginPath();
+        drawing.arc(center.x, center.y, 28 + state.chargeProgress * 58, time * 0.004, time * 0.004 + Math.PI * 1.7);
+        drawing.lineWidth = 3 + state.chargeProgress * 4;
+        drawing.stroke();
+        drawing.beginPath();
+        drawing.arc(center.x, center.y, 8 + state.chargeProgress * 22, 0, Math.PI * 2);
+        drawing.fill();
+        drawing.restore();
+      }
+
+      document.querySelector("#startButton").addEventListener("click", startPrimeReview);
+      reviewConfirmButton.addEventListener("click", confirmPrimeReview);
+      document.querySelector("#splitButton").addEventListener("click", () => answerPrimeGate(true));
+      document.querySelector("#menuButton").addEventListener("click", () => answerPrimeGate(false));
+      document.querySelector("#burstButton").addEventListener("click", useBurst);
+      document.querySelector("#pauseButton").addEventListener("click", () => setPaused(true));
+      document.querySelector("#resumeButton").addEventListener("click", () => setPaused(false));
+      document.querySelector("#settingsButton").addEventListener("click", () => {
+        settingsPanel.classList.remove("hidden");
+        playSfx("menu");
+      });
+      document.querySelector("#closeSettingsButton").addEventListener("click", () => {
+        settingsPanel.classList.add("hidden");
+        playSfx("menu");
+      });
+      lifeCount.addEventListener("change", () => {
+        preferences.maxHealth = Number(lifeCount.value) === 5 ? 5 : 10;
+        state.maxHealth = preferences.maxHealth;
+        state.health = state.phase === "playing" || state.phase === "paused"
+          ? Math.min(state.health, state.maxHealth)
+          : state.maxHealth;
+        updateSettingsUi();
+        savePreferences();
+        syncHud();
+        playSfx("select");
+      });
+      bgmVolume.addEventListener("input", () => {
+        preferences.bgmVolume = Number(bgmVolume.value) / 100;
+        updateSettingsUi();
+        savePreferences();
+      });
+
+      sfxVolume.addEventListener("input", () => {
+        preferences.sfxVolume = Number(sfxVolume.value) / 100;
+        updateSettingsUi();
+        savePreferences();
+        playSfx("menu");
+      });
+      cameraPreviewToggle.addEventListener("change", () => {
+        preferences.showCameraPreview = cameraPreviewToggle.checked;
+        updateSettingsUi();
+        savePreferences();
+        playSfx("select");
+      });
+
+      document.querySelectorAll("[data-level]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-level]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          state.level = button.dataset.level;
+          const label = button.textContent.trim();
+          playSfx("menu");
+          showFeedback("難度已切換", label, 1200);
+        });
+      });
+
+        window.addEventListener("keydown", (event) => {
+          if (state.phase === "review" && event.key === "Enter") {
+            event.preventDefault();
+            confirmPrimeReview();
+            return;
+          }
+          if (state.phase === "paused" && event.key === "Escape") {
+          setPaused(false);
+          return;
+        }
+        if (state.phase !== "playing") return;
+        if (event.key === "Escape") {
+          setPaused(true);
+          return;
+        }
+          if (event.key.toLowerCase() === "a" || event.code === "Space") {
+            event.preventDefault();
+            answerPrimeGate(true);
+          }
+          if (event.key.toLowerCase() === "d") answerPrimeGate(false);
+          if (event.key.toLowerCase() === "q") useBurst();
+        const index = Number(event.key) - 1;
+        if (state.choicesOpen && index >= 0 && index < choiceGrid.children.length) {
+          choiceGrid.children[index].click();
+        }
+      });
+
+      loadPreferences();
+      syncHud();
+      requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>
