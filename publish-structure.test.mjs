@@ -117,7 +117,7 @@ test("first level is a prime versus non-prime gate with ten correct answers to p
   assert.doesNotMatch(game, /gestures\.leftCursor && gestures\.leftCursor\.x < 0\.42/);
   assert.doesNotMatch(game, /gestures\.rightCursor && gestures\.rightCursor\.x > 0\.58/);
   assert.match(game, /聚爆跳過/);
-  assert.match(game, /進入下一關：合數破陣/);
+  assert.match(game, /進入第二關：質數收集陣/);
 });
 
 test("latest game reviews all 25 primes before the first challenge starts", () => {
@@ -188,4 +188,51 @@ test("latest review screen keeps the prime list compact instead of full-bleed", 
   assert.match(game, /prime-list[\s\S]*?max-width: 720px/);
   assert.match(game, /prime-chip[\s\S]*?min-height: 32px/);
   assert.match(game, /review-zone[\s\S]*?min-height: 82px/);
+});
+
+test("second level collects all 25 primes from five-number rounds", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /第二關：質數收集陣/);
+  assert.match(game, /PRIME_COLLECTION_GOAL = primeNumbersUpTo100\.length/);
+  assert.match(game, /COLLECTION_ROUND_SIZE = 5/);
+  assert.match(game, /collectedPrimes:\s*new Set\(\)/);
+  assert.match(game, /spawnPrimeCollectionRound/);
+  assert.match(game, /answerPrimeCollection/);
+  assert.match(game, /completePrimeCollection/);
+  assert.match(game, /已召喚 \$\{state\.collectedPrimes\.size\}\/\$\{PRIME_COLLECTION_GOAL\}/);
+});
+
+test("second level keeps duplicate primes safe and lets burst clear composites", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /已召喚過/);
+  assert.match(game, /state\.collectedPrimes\.has\(number\)/);
+  assert.match(game, /clearPrimeCollectionComposites/);
+  assert.match(game, /filter\(\(choice\) => isPrime\(choice\.number\)\)/);
+  assert.match(game, /聚爆清除本輪非質數/);
+  assert.doesNotMatch(game, /state\.health -= 1;[\s\S]{0,160}已召喚過/);
+});
+
+test("second level keeps gesture hit targets stable after burst filtering", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /isCursorInCollectionChoice\(cursor, item\.index\)/);
+  assert.match(game, /target\.choices\.find\(\(item\) => item\.index === choiceIndex\)/);
+  assert.match(game, /const position = COLLECTION_POSITIONS\[choice\.index\]/);
 });
