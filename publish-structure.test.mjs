@@ -332,7 +332,7 @@ test("second level number selection is more forgiving and has no inner summon te
   assert.doesNotMatch(game, /停留召喚/);
 });
 
-test("second level chooses the nearest collection number and enlarges the center hit area", () => {
+test("second level chooses the nearest collection number with equal hit radii", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -340,12 +340,11 @@ test("second level chooses the nearest collection number and enlarges the center
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /const COLLECTION_CENTER_HIT_RADIUS = 0\.24/);
   assert.match(game, /function getCollectionHitRadius\(index\)/);
-  assert.match(game, /index === 2 \? COLLECTION_CENTER_HIT_RADIUS : COLLECTION_HIT_RADIUS/);
+  assert.doesNotMatch(game, /COLLECTION_CENTER_HIT_RADIUS/);
+  assert.match(game, /return COLLECTION_HIT_RADIUS/);
   assert.match(game, /function getPrimeCollectionHoveredChoice\(cursors, choices\)/);
-  assert.match(game, /const centerChoice = choices\.find\(\(choice\) => choice\.index === 2\)/);
-  assert.match(game, /return centerChoice/);
+  assert.doesNotMatch(game, /const centerChoice = choices\.find/);
   assert.match(game, /hits\.sort\(\(a, b\) => a\.distance - b\.distance\)/);
 });
 
