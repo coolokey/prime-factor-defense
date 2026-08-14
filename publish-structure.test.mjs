@@ -159,7 +159,7 @@ test("latest game lets students verify prime and non-prime gesture zones during 
   assert.match(game, /非質數感應/);
 });
 
-test("complete challenge uses a fixed 1 to 100 range and no difficulty buttons", () => {
+test("second level trial starts directly while keeping the fixed 1 to 100 range and no difficulty buttons", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -167,9 +167,9 @@ test("complete challenge uses a fixed 1 to 100 range and no difficulty buttons",
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /完整挑戰：質數守門與收集陣/);
-  assert.match(game, /開始完整挑戰/);
-  assert.match(game, /startButton"\)\.addEventListener\("click", startPrimeReview\)/);
+  assert.match(game, /第二關試玩：質數收集陣/);
+  assert.match(game, /開始試玩第二關/);
+  assert.match(game, /startButton"\)\.addEventListener\("click", startSecondLevelPractice\)/);
   assert.match(game, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
   assert.doesNotMatch(game, /data-level/);
   assert.doesNotMatch(game, /簡單 2-30/);
@@ -257,7 +257,7 @@ test("second level keeps gesture hit targets stable after burst filtering", () =
   assert.match(game, /const position = COLLECTION_POSITIONS\[choice\.index\]/);
 });
 
-test("second level gesture practice remains available inside the merged challenge", () => {
+test("second level gesture practice remains available before the trial", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -272,8 +272,8 @@ test("second level gesture practice remains available inside the merged challeng
   assert.match(game, /確認答案後再伸出手指去選擇/);
   assert.match(game, /secondThinkReady/);
   assert.match(game, /secondPointReady/);
-  assert.match(game, /第二段開始前先完成手勢練習/);
-  assert.doesNotMatch(game, /開始試玩第二關/);
+  assert.match(game, /第二關試玩前先完成手勢練習/);
+  assert.match(game, /開始試玩第二關/);
 });
 
 test("second level collection choices stay high with the third number at the circle center", () => {
@@ -346,8 +346,8 @@ test("second level number selection is more forgiving and has no inner summon te
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /const COLLECTION_HOVER_MS = 450/);
-  assert.match(game, /const COLLECTION_HIT_RADIUS = 0\.13/);
-  assert.match(game, /<= getCollectionHitRadius\(index\)/);
+  assert.match(game, /const COLLECTION_HIT_RADIUS_PX = 72/);
+  assert.match(game, /<= getCollectionHitRadius\(\)/);
   assert.doesNotMatch(game, /停留召喚/);
 });
 
@@ -359,12 +359,32 @@ test("second level chooses the nearest collection number with equal hit radii", 
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /function getCollectionHitRadius\(index\)/);
+  assert.doesNotMatch(game, /function getCollectionHitRadius\(index\)/);
   assert.doesNotMatch(game, /COLLECTION_CENTER_HIT_RADIUS/);
-  assert.match(game, /return COLLECTION_HIT_RADIUS/);
+  assert.match(game, /const COLLECTION_HIT_RADIUS_PX = 72/);
+  assert.match(game, /function getCollectionHitRadius\(\)/);
+  assert.match(game, /return COLLECTION_HIT_RADIUS_PX/);
+  assert.match(game, /function getCollectionPixelPosition\(index\)/);
   assert.match(game, /function getPrimeCollectionHoveredChoice\(cursors, choices\)/);
   assert.doesNotMatch(game, /const centerChoice = choices\.find/);
   assert.match(game, /hits\.sort\(\(a, b\) => a\.distance - b\.distance\)/);
+});
+
+test("second level collection colors are randomized and do not reveal primality", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /COLLECTION_COLOR_PALETTE/);
+  assert.match(game, /const colorPool = shuffle\(COLLECTION_COLOR_PALETTE\)/);
+  assert.match(game, /color:\s*colorPool\[index % colorPool\.length\]/);
+  assert.match(game, /drawCollectionNumber\(choice\.number, x, y, active, collected, choice\.color, time\)/);
+  assert.match(game, /function drawCollectionNumber\(number, x, y, active, collected, color, time\)/);
+  assert.doesNotMatch(game, /drawCollectionNumber\(choice\.number, x, y, active, collected, prime, already, time\)/);
+  assert.doesNotMatch(game, /const color = collected \|\| already \? AURORA\.gold : prime \? AURORA\.correct : AURORA\.danger/);
 });
 
 test("second level composite selections deduct health and directly call out composites", () => {
