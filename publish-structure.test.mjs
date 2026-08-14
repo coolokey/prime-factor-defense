@@ -280,7 +280,7 @@ test("second level correct answers disappear and wrong answers explain composite
 
   assert.match(game, /removePrimeCollectionChoice\(choiceIndex\)/);
   assert.match(game, /target\.choices = target\.choices\.filter\(\(item\) => item\.index !== choiceIndex\)/);
-  assert.match(game, /showFeedback\("此數為合數", getCompositeReminder\(number\), 2200\)/);
+  assert.match(game, /showCollectionHint\(choiceIndex, "此數為合數", getCompositeReminder\(number\), 2200\)/);
   assert.match(game, /state\.collectionRejectedChoice = choiceIndex/);
   assert.doesNotMatch(game, /else \{[\s\S]{0,260}removePrimeCollectionChoice\(choiceIndex\)/);
   assert.match(game, /function getCompositeReminder\(number\)/);
@@ -357,6 +357,23 @@ test("second level composite selections deduct health and directly call out comp
 
   assert.match(game, /state\.health = Math\.max\(0, state\.health - 1\)/);
   assert.match(game, /state\.collectionRejectedChoice = choiceIndex/);
-  assert.match(game, /showFeedback\("此數為合數", getCompositeReminder\(number\), 2200\)/);
+  assert.match(game, /showCollectionHint\(choiceIndex, "此數為合數", getCompositeReminder\(number\), 2200\)/);
+  assert.doesNotMatch(game, /showFeedback\("此數為合數"/);
   assert.match(game, /if \(state\.health <= 0\) endGame\(\)/);
+});
+
+test("second level composite hint is drawn below the selected number", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /collectionHint:\s*null/);
+  assert.match(game, /function showCollectionHint\(choiceIndex, title, body, duration\)/);
+  assert.match(game, /state\.collectionHint = \{\s*choiceIndex,/);
+  assert.match(game, /drawCollectionHint\(choice\.index, x, y\)/);
+  assert.match(game, /function drawCollectionHint\(choiceIndex, x, y\)/);
+  assert.match(game, /ctx\.translate\(x, y \+ 78\)/);
 });
