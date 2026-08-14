@@ -232,7 +232,7 @@ test("second level keeps gesture hit targets stable after burst filtering", () =
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /isCursorInCollectionChoice\(cursor, item\.index\)/);
+  assert.match(game, /getPrimeCollectionHoveredChoice\(cursors, target\.choices\)/);
   assert.match(game, /target\.choices\.find\(\(item\) => item\.index === choiceIndex\)/);
   assert.match(game, /const position = COLLECTION_POSITIONS\[choice\.index\]/);
 });
@@ -280,7 +280,7 @@ test("second level correct answers disappear and wrong answers explain composite
 
   assert.match(game, /removePrimeCollectionChoice\(choiceIndex\)/);
   assert.match(game, /target\.choices = target\.choices\.filter\(\(item\) => item\.index !== choiceIndex\)/);
-  assert.match(game, /showFeedback\("不是質數", getCompositeReminder\(number\), 2600\)/);
+  assert.match(game, /showFeedback\("此數為合數", getCompositeReminder\(number\), 2200\)/);
   assert.match(game, /function getCompositeReminder\(number\)/);
   assert.match(game, /可以被 \$\{pair\[0\]\} 和 \$\{pair\[1\]\} 整除/);
 });
@@ -324,6 +324,35 @@ test("second level number selection is more forgiving and has no inner summon te
 
   assert.match(game, /const COLLECTION_HOVER_MS = 450/);
   assert.match(game, /const COLLECTION_HIT_RADIUS = 0\.13/);
-  assert.match(game, /<= COLLECTION_HIT_RADIUS/);
+  assert.match(game, /<= getCollectionHitRadius\(index\)/);
   assert.doesNotMatch(game, /停留召喚/);
+});
+
+test("second level chooses the nearest collection number and enlarges the center hit area", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /const COLLECTION_CENTER_HIT_RADIUS = 0\.18/);
+  assert.match(game, /function getCollectionHitRadius\(index\)/);
+  assert.match(game, /index === 2 \? COLLECTION_CENTER_HIT_RADIUS : COLLECTION_HIT_RADIUS/);
+  assert.match(game, /function getPrimeCollectionHoveredChoice\(cursors, choices\)/);
+  assert.match(game, /hits\.sort\(\(a, b\) => a\.distance - b\.distance\)/);
+});
+
+test("second level composite selections deduct health and directly call out composites", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /state\.health = Math\.max\(0, state\.health - 1\)/);
+  assert.match(game, /removePrimeCollectionChoice\(choiceIndex\)/);
+  assert.match(game, /showFeedback\("此數為合數", getCompositeReminder\(number\), 2200\)/);
+  assert.match(game, /if \(state\.health <= 0\) endGame\(\)/);
 });
