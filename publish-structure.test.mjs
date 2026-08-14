@@ -276,7 +276,7 @@ test("second level gesture practice remains available before the trial", () => {
   assert.match(game, /開始試玩第二關/);
 });
 
-test("second level third collection choice sits at the progress circle center", () => {
+test("second level third collection choice sits at the collection circle core", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -288,6 +288,20 @@ test("second level third collection choice sits at the progress circle center", 
   assert.match(game, /COLLECTION_POSITIONS = \[\s*\{ x: 0\.27, y: 0\.22 \},\s*\{ x: 0\.73, y: 0\.22 \},\s*COLLECTION_CENTER,/);
   assert.match(game, /const centerY = h \* 0\.5/);
   assert.match(game, /ctx\.fillText\("第二關：質數收集陣", centerX, h \* 0\.08\)/);
+});
+
+test("second level keeps the countdown ring away from the center collection choice", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+  const collectionTarget = game.match(/function drawPrimeCollectionTarget[\s\S]*?(?=function drawCollectionHint)/)?.[0] || "";
+
+  assert.match(game, /const COLLECTION_PROGRESS_POSITION = \{ x: 0\.5, y: 0\.72 \}/);
+  assert.match(game, /drawProgress\(w \* COLLECTION_PROGRESS_POSITION\.x, h \* COLLECTION_PROGRESS_POSITION\.y, target\.progress\)/);
+  assert.doesNotMatch(collectionTarget, /drawProgress\(centerX, centerY, target\.progress\)/);
 });
 
 test("second level correct answers disappear and wrong answers explain composites", () => {
