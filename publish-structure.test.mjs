@@ -276,7 +276,7 @@ test("second level gesture practice remains available before the trial", () => {
   assert.match(game, /開始試玩第二關/);
 });
 
-test("second level collection choices stay high with the third number at the circle center", () => {
+test("second level third collection choice sits at the progress circle center", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -284,8 +284,9 @@ test("second level collection choices stay high with the third number at the cir
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /COLLECTION_CENTER = \{ x: 0\.5, y: 0\.34 \}/);
+  assert.match(game, /COLLECTION_CENTER = \{ x: 0\.5, y: 0\.5 \}/);
   assert.match(game, /COLLECTION_POSITIONS = \[\s*\{ x: 0\.27, y: 0\.22 \},\s*\{ x: 0\.73, y: 0\.22 \},\s*COLLECTION_CENTER,/);
+  assert.match(game, /const centerY = h \* 0\.5/);
   assert.match(game, /ctx\.fillText\("第二關：質數收集陣", centerX, h \* 0\.08\)/);
 });
 
