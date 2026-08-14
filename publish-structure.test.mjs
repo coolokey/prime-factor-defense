@@ -281,6 +281,8 @@ test("second level correct answers disappear and wrong answers explain composite
   assert.match(game, /removePrimeCollectionChoice\(choiceIndex\)/);
   assert.match(game, /target\.choices = target\.choices\.filter\(\(item\) => item\.index !== choiceIndex\)/);
   assert.match(game, /showFeedback\("此數為合數", getCompositeReminder\(number\), 2200\)/);
+  assert.match(game, /state\.collectionRejectedChoice = choiceIndex/);
+  assert.doesNotMatch(game, /else \{[\s\S]{0,260}removePrimeCollectionChoice\(choiceIndex\)/);
   assert.match(game, /function getCompositeReminder\(number\)/);
   assert.match(game, /可以被 \$\{pair\[0\]\} 和 \$\{pair\[1\]\} 整除/);
 });
@@ -309,7 +311,9 @@ test("second level practice confirm button can be triggered by gesture", () => {
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /已完成手勢練習 開始進行遊戲/);
-  assert.match(game, /cursorInExpandedElement\(cursor, secondReviewConfirmButton, 36\)/);
+  assert.match(game, /const SECOND_REVIEW_CONFIRM_HOVER_MS = 450/);
+  assert.match(game, /\[gestures\.leftCursor, gestures\.rightCursor\]\.filter\(Boolean\)/);
+  assert.match(game, /cursorInExpandedElement\(cursor, secondReviewConfirmButton, 96\)/);
   assert.match(game, /trackSecondReviewConfirmGesture/);
   assert.match(game, /secondReviewConfirmButton\.classList\.toggle\("active", hovering\)/);
 });
@@ -352,7 +356,7 @@ test("second level composite selections deduct health and directly call out comp
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /state\.health = Math\.max\(0, state\.health - 1\)/);
-  assert.match(game, /removePrimeCollectionChoice\(choiceIndex\)/);
+  assert.match(game, /state\.collectionRejectedChoice = choiceIndex/);
   assert.match(game, /showFeedback\("此數為合數", getCompositeReminder\(number\), 2200\)/);
   assert.match(game, /if \(state\.health <= 0\) endGame\(\)/);
 });
