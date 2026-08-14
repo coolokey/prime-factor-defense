@@ -299,3 +299,31 @@ test("second level only allows pointing hands to select numbers", () => {
   assert.match(game, /const cursors = getPrimeCollectionPointingCursors\(\)/);
   assert.match(game, /function trackPrimeCollectionHands\(time\) \{[\s\S]*?const cursors = getPrimeCollectionPointingCursors\(\)/);
 });
+
+test("second level practice confirm button can be triggered by gesture", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /已完成手勢練習 開始進行遊戲/);
+  assert.match(game, /cursorInExpandedElement\(cursor, secondReviewConfirmButton, 36\)/);
+  assert.match(game, /trackSecondReviewConfirmGesture/);
+  assert.match(game, /secondReviewConfirmButton\.classList\.toggle\("active", hovering\)/);
+});
+
+test("second level number selection is more forgiving and has no inner summon text", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /const COLLECTION_HOVER_MS = 450/);
+  assert.match(game, /const COLLECTION_HIT_RADIUS = 0\.13/);
+  assert.match(game, /<= COLLECTION_HIT_RADIUS/);
+  assert.doesNotMatch(game, /停留召喚/);
+});
