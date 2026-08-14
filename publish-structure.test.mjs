@@ -159,6 +159,26 @@ test("latest game lets students verify prime and non-prime gesture zones during 
   assert.match(game, /非質數感應/);
 });
 
+test("complete challenge uses a fixed 1 to 100 range and no difficulty buttons", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /完整挑戰：質數守門與收集陣/);
+  assert.match(game, /開始完整挑戰/);
+  assert.match(game, /startButton"\)\.addEventListener\("click", startPrimeReview\)/);
+  assert.match(game, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
+  assert.doesNotMatch(game, /data-level/);
+  assert.doesNotMatch(game, /簡單 2-30/);
+  assert.doesNotMatch(game, /普通 2-60/);
+  assert.doesNotMatch(game, /挑戰 2-100/);
+  assert.doesNotMatch(game, /getDifficultyPool/);
+  assert.doesNotMatch(game, /state\.level/);
+});
+
 test("latest game shows remaining lives as red hearts and lost lives as white hearts", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
@@ -237,7 +257,7 @@ test("second level keeps gesture hit targets stable after burst filtering", () =
   assert.match(game, /const position = COLLECTION_POSITIONS\[choice\.index\]/);
 });
 
-test("second level trial opens a gesture practice gate before playtesting", () => {
+test("second level gesture practice remains available inside the merged challenge", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -245,16 +265,15 @@ test("second level trial opens a gesture practice gate before playtesting", () =
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /第二關試玩：質數收集陣/);
   assert.match(game, /secondReviewOverlay/);
   assert.match(game, /startSecondLevelPractice/);
-  assert.match(game, /startSecondLevelTrial/);
   assert.match(game, /state\.phase = "secondReview"/);
   assert.match(game, /思考時請握拳/);
   assert.match(game, /確認答案後再伸出手指去選擇/);
   assert.match(game, /secondThinkReady/);
   assert.match(game, /secondPointReady/);
-  assert.match(game, /開始試玩第二關/);
+  assert.match(game, /第二段開始前先完成手勢練習/);
+  assert.doesNotMatch(game, /開始試玩第二關/);
 });
 
 test("second level collection choices stay high with the third number at the circle center", () => {
@@ -377,4 +396,18 @@ test("second level composite hint is drawn below the selected number", () => {
   assert.match(game, /drawCollectionHint\(choice\.index, x, y\)/);
   assert.match(game, /function drawCollectionHint\(choiceIndex, x, y\)/);
   assert.match(game, /ctx\.translate\(x, y \+ 78\)/);
+});
+
+test("third final chapter appears as the next locked ending after prime collection", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /第三關：質數封印戰/);
+  assert.match(game, /完結篇即將開啟/);
+  assert.match(game, /前兩段挑戰已完成/);
+  assert.match(game, /overlay\.querySelector\("#startButton"\)\.textContent = "重新開始完整挑戰"/);
 });
