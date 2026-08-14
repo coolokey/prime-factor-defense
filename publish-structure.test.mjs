@@ -276,7 +276,7 @@ test("second level gesture practice remains available before the trial", () => {
   assert.match(game, /開始試玩第二關/);
 });
 
-test("second level spaces every collection choice away from the center core", () => {
+test("second level keeps all five collection choices in the upper circle", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -285,13 +285,12 @@ test("second level spaces every collection choice away from the center core", ()
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /COLLECTION_CENTER = \{ x: 0\.5, y: 0\.5 \}/);
-  assert.match(game, /COLLECTION_POSITIONS = \[\s*\{ x: 0\.24, y: 0\.27 \},\s*\{ x: 0\.76, y: 0\.27 \},\s*COLLECTION_CENTER,\s*\{ x: 0\.24, y: 0\.73 \},\s*\{ x: 0\.76, y: 0\.73 \}/);
-  assert.match(game, /COLLECTION_HIT_RADIUS_PX = 84/);
-  assert.match(game, /const centerY = h \* 0\.5/);
+  assert.match(game, /COLLECTION_POSITIONS = \[\s*\{ x: 0\.14, y: 0\.23 \},\s*\{ x: 0\.34, y: 0\.23 \},\s*\{ x: 0\.5, y: 0\.49 \},\s*\{ x: 0\.66, y: 0\.23 \},\s*\{ x: 0\.86, y: 0\.23 \}/);
+  assert.match(game, /COLLECTION_HIT_RADIUS_PX = 78/);
   assert.match(game, /ctx\.fillText\("第二關：質數收集陣", centerX, h \* 0\.08\)/);
 });
 
-test("second level renders the countdown behind the centered collection choice", () => {
+test("second level renders a compact countdown behind the upper centered collection choice", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -300,8 +299,8 @@ test("second level renders the countdown behind the centered collection choice",
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
   const collectionTarget = game.match(/function drawPrimeCollectionTarget[\s\S]*?(?=function drawCollectionHint)/)?.[0] || "";
 
-  assert.match(collectionTarget, /const centerY = h \* 0\.5/);
-  assert.match(collectionTarget, /drawProgress\(centerX, centerY, target\.progress\);[\s\S]*?target\.choices\.forEach/);
+  assert.match(collectionTarget, /const centerY = h \* 0\.49/);
+  assert.match(collectionTarget, /drawProgress\(centerX, centerY, target\.progress, 68\);[\s\S]*?target\.choices\.forEach/);
   assert.doesNotMatch(game, /COLLECTION_PROGRESS_POSITION/);
 });
 
@@ -362,7 +361,7 @@ test("second level number selection is more forgiving and has no inner summon te
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /const COLLECTION_HOVER_MS = 450/);
-  assert.match(game, /const COLLECTION_HIT_RADIUS_PX = 84/);
+  assert.match(game, /const COLLECTION_HIT_RADIUS_PX = 78/);
   assert.match(game, /<= getCollectionHitRadius\(\)/);
   assert.doesNotMatch(game, /停留召喚/);
 });
@@ -377,7 +376,7 @@ test("second level chooses the nearest collection number with equal hit radii", 
 
   assert.doesNotMatch(game, /function getCollectionHitRadius\(index\)/);
   assert.doesNotMatch(game, /COLLECTION_CENTER_HIT_RADIUS/);
-  assert.match(game, /const COLLECTION_HIT_RADIUS_PX = 84/);
+  assert.match(game, /const COLLECTION_HIT_RADIUS_PX = 78/);
   assert.match(game, /function getCollectionHitRadius\(\)/);
   assert.match(game, /return COLLECTION_HIT_RADIUS_PX/);
   assert.match(game, /function getCollectionPixelPosition\(index\)/);
