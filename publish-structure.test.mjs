@@ -236,3 +236,46 @@ test("second level keeps gesture hit targets stable after burst filtering", () =
   assert.match(game, /target\.choices\.find\(\(item\) => item\.index === choiceIndex\)/);
   assert.match(game, /const position = COLLECTION_POSITIONS\[choice\.index\]/);
 });
+
+test("second level trial starts directly at collection mode for playtesting", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /第二關試玩：質數收集陣/);
+  assert.match(game, /startSecondLevelTrial/);
+  assert.match(game, /stage: "primeCollection"/);
+  assert.match(game, /開始試玩第二關/);
+});
+
+test("second level collection choices stay in the upper half", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+  const positions = [...game.matchAll(/\{ x: [0-9.]+, y: ([0-9.]+) \}/g)].map((match) => Number(match[1]));
+
+  assert.ok(positions.length >= 5, "expected five collection positions");
+  assert.ok(positions.slice(0, 5).every((y) => y <= 0.46), "all five collection positions should be in the upper half");
+  assert.match(game, /ctx\.fillText\("第二關：質數收集陣", centerX, h \* 0\.08\)/);
+});
+
+test("second level correct answers disappear and wrong answers explain composites", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const datedGames = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort();
+  const latest = datedGames.at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /removePrimeCollectionChoice\(choiceIndex\)/);
+  assert.match(game, /target\.choices = target\.choices\.filter\(\(item\) => item\.index !== choiceIndex\)/);
+  assert.match(game, /showFeedback\("不是質數", getCompositeReminder\(number\), 2600\)/);
+  assert.match(game, /function getCompositeReminder\(number\)/);
+  assert.match(game, /可以被 \$\{pair\[0\]\} 和 \$\{pair\[1\]\} 整除/);
+});
