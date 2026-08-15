@@ -550,3 +550,29 @@ test("latest game opens settings before starting the challenge", () => {
   assert.match(game, /完成並開始/);
   assert.doesNotMatch(game, /開始完整挑戰/);
 });
+
+test("latest game can submit and read a Firebase Firestore leaderboard", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const latest = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /FIREBASE_CONFIG/);
+  assert.match(game, /firebasejs\/10\.12\.5\/firebase-app\.js/);
+  assert.match(game, /firebasejs\/10\.12\.5\/firebase-firestore\.js/);
+  assert.match(game, /primeFactorDefenseScores/);
+  assert.match(game, /leaderboardPanel/);
+  assert.match(game, /leaderboardList/);
+  assert.match(game, /submitLeaderboardScore/);
+  assert.match(game, /loadLeaderboard/);
+  assert.match(game, /buildScoreRecord/);
+  assert.match(game, /qualityScore/);
+  assert.match(game, /serverTimestamp\(\)/);
+  assert.match(game, /orderBy\("qualityScore", "desc"\)/);
+  assert.match(game, /orderBy\("elapsedSeconds", "asc"\)/);
+  assert.match(game, /排行榜尚未連線/);
+  assert.match(game, /查看排行榜/);
+  assert.match(game, /Firebase 設定/);
+});

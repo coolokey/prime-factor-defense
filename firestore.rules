@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /primeFactorDefenseScores/{scoreId} {
+      allow read: if true;
+      allow create: if isValidScore(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    function isValidScore(data) {
+      return data.keys().hasOnly([
+          'playerName',
+          'rankKey',
+          'rankLabel',
+          'qualityScore',
+          'elapsedSeconds',
+          'mistakes',
+          'hintsUsed',
+          'bestCombo',
+          'score',
+          'maxHealth',
+          'completed',
+          'gameVersion',
+          'createdAt'
+        ])
+        && data.playerName is string
+        && data.playerName.size() > 0
+        && data.playerName.size() <= 12
+        && data.rankKey in ['diamond', 'gold', 'silver', 'bronze', 'novice']
+        && data.rankLabel is string
+        && data.qualityScore is int
+        && data.qualityScore >= 0
+        && data.qualityScore <= 20000
+        && data.elapsedSeconds is int
+        && data.elapsedSeconds >= 0
+        && data.elapsedSeconds <= 7200
+        && data.mistakes is int
+        && data.mistakes >= 0
+        && data.mistakes <= 200
+        && data.hintsUsed is int
+        && data.hintsUsed >= 0
+        && data.hintsUsed <= 50
+        && data.bestCombo is int
+        && data.bestCombo >= 0
+        && data.bestCombo <= 200
+        && data.score is int
+        && data.score >= 0
+        && data.score <= 5000
+        && data.maxHealth in [5, 10]
+        && data.completed == true
+        && data.gameVersion is string
+        && data.createdAt == request.time;
+    }
+  }
+}

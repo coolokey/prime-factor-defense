@@ -1,0 +1,23 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "primeFactorDefenseScores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "qualityScore",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "elapsedSeconds",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
