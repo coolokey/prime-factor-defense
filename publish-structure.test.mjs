@@ -159,7 +159,7 @@ test("latest game lets students verify prime and non-prime gesture zones during 
   assert.match(game, /非質數感應/);
 });
 
-test("complete challenge starts at level one, then transitions to level two with the fixed 1 to 100 range", () => {
+test("third level preview starts directly while retaining the complete challenge flow", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -167,9 +167,10 @@ test("complete challenge starts at level one, then transitions to level two with
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /完整挑戰：質數守門與質數收集陣/);
-  assert.match(game, /開始完整挑戰/);
-  assert.match(game, /startButton"\)\.addEventListener\("click", startPrimeReview\)/);
+  assert.match(game, /第三關試玩：倍數雷達陣/);
+  assert.match(game, /開始試玩第三關/);
+  assert.match(game, /startButton"\)\.addEventListener\("click", startMultipleRadarPreview\)/);
+  assert.match(game, /async function startMultipleRadarPreview\(\)/);
   assert.match(game, /state\.primeGateCorrect >= PRIME_GATE_GOAL\) completePrimeGate\(\)/);
   assert.match(game, /startSecondLevelPractice\(\)/);
   assert.match(game, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
