@@ -159,7 +159,7 @@ test("latest game lets students verify prime and non-prime gesture zones during 
   assert.match(game, /非質數感應/);
 });
 
-test("second level trial starts directly while keeping the fixed 1 to 100 range and no difficulty buttons", () => {
+test("complete challenge starts at level one, then transitions to level two with the fixed 1 to 100 range", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -167,9 +167,11 @@ test("second level trial starts directly while keeping the fixed 1 to 100 range 
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /第二關試玩：質數收集陣/);
-  assert.match(game, /開始試玩第二關/);
-  assert.match(game, /startButton"\)\.addEventListener\("click", startSecondLevelPractice\)/);
+  assert.match(game, /完整挑戰：質數守門與質數收集陣/);
+  assert.match(game, /開始完整挑戰/);
+  assert.match(game, /startButton"\)\.addEventListener\("click", startPrimeReview\)/);
+  assert.match(game, /state\.primeGateCorrect >= PRIME_GATE_GOAL\) completePrimeGate\(\)/);
+  assert.match(game, /startSecondLevelPractice\(\)/);
   assert.match(game, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
   assert.doesNotMatch(game, /data-level/);
   assert.doesNotMatch(game, /簡單 2-30/);
@@ -272,8 +274,8 @@ test("second level gesture practice remains available before the trial", () => {
   assert.match(game, /確認答案後再伸出手指去選擇/);
   assert.match(game, /secondThinkReady/);
   assert.match(game, /secondPointReady/);
-  assert.match(game, /第二關試玩前先完成手勢練習/);
-  assert.match(game, /開始試玩第二關/);
+  assert.match(game, /第二關手勢練習：握拳是思考/);
+  assert.match(game, /已完成手勢練習 開始進行遊戲/);
 });
 
 test("second level lays all five collection choices in one evenly spaced center row", () => {
