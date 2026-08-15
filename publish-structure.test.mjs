@@ -171,6 +171,14 @@ test("third level preview starts directly while retaining the complete challenge
   assert.match(game, /開始試玩第三關/);
   assert.match(game, /startButton"\)\.addEventListener\("click", startMultipleRadarPreview\)/);
   assert.match(game, /async function startMultipleRadarPreview\(\)/);
+  assert.match(game, /thirdReviewOverlay/);
+  assert.match(game, /第三關：倍數判別法確認/);
+  assert.match(game, /2：個位數是 0、2、4、6、8/);
+  assert.match(game, /11：奇數位數字和與偶數位數字和的差/);
+  assert.match(game, /thirdThinkReady/);
+  assert.match(game, /thirdPointReady/);
+  assert.match(game, /confirmMultipleRadarPreview/);
+  assert.match(game, /已確認規則，開始倍數雷達挑戰/);
   assert.match(game, /state\.primeGateCorrect >= PRIME_GATE_GOAL\) completePrimeGate\(\)/);
   assert.match(game, /startSecondLevelPractice\(\)/);
   assert.match(game, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
