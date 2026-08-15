@@ -21,6 +21,17 @@ export function isFist(landmarks) {
   );
 }
 
+export function isPointingHand(landmarks) {
+  if (!Array.isArray(landmarks) || landmarks.length < 21) return false;
+  const palm = distance(landmarks[0], landmarks[9]);
+  const indexExtended =
+    distance(landmarks[8], landmarks[0]) > distance(landmarks[6], landmarks[0]) + palm * 0.12;
+  const foldedOtherFingers = [12, 16, 20].filter(
+    (tip) => distance(landmarks[tip], landmarks[0]) < distance(landmarks[tip - 2], landmarks[0]) + palm * 0.08,
+  ).length;
+  return indexExtended && foldedOtherFingers >= 2;
+}
+
 function normalize(vector) {
   const length = Math.hypot(vector.x, vector.y, vector.z) || 1;
   return { x: vector.x / length, y: vector.y / length, z: vector.z / length };

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { isFist, isOpenHand } from "./gesture-core.mjs";
+import { isFist, isOpenHand, isPointingHand } from "./gesture-core.mjs";
 
 function makeHand(open) {
   const hand = Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 }));
@@ -30,6 +30,15 @@ test("matches the original site's 2D open-hand rule when depth varies", () => {
   for (const joint of [6, 10, 14, 18]) hand[joint].z = 1.2;
 
   assert.equal(isOpenHand(hand), true);
+});
+
+test("accepts an extended index finger but rejects an open palm for selection", () => {
+  const pointing = makeHand(false);
+  pointing[6] = { x: 0, y: 0.62, z: 0 };
+  pointing[8] = { x: 0, y: 1.12, z: 0 };
+
+  assert.equal(isPointingHand(pointing), true);
+  assert.equal(isPointingHand(makeHand(true)), false);
 });
 
 test("site contains camera gesture mode", () => {

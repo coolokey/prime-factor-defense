@@ -327,11 +327,15 @@ test("second level only allows pointing hands to select numbers", () => {
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /getPrimeCollectionPointingCursors/);
-  assert.match(game, /gestures\.leftCursor && !gestures\.leftFist/);
-  assert.match(game, /gestures\.rightCursor && !gestures\.rightFist/);
+  assert.match(game, /isPointingHand/);
+  assert.match(game, /leftPointing/);
+  assert.match(game, /rightPointing/);
+  assert.match(game, /gestures\.leftCursor && gestures\.leftPointing/);
+  assert.match(game, /gestures\.rightCursor && gestures\.rightPointing/);
   assert.match(game, /const cursors = getPrimeCollectionPointingCursors\(\)/);
   assert.match(game, /function trackPrimeCollectionHands\(time\) \{[\s\S]*?const cursors = getPrimeCollectionPointingCursors\(\)/);
+  assert.match(game, /collectionHoverHand/);
+  assert.match(game, /const lockedCursor = cursors\.find\(\(cursor\) => cursor\.hand === state\.collectionHoverHand\)/);
 });
 
 test("second level practice confirm button can be triggered by gesture", () => {
