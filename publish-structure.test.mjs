@@ -474,3 +474,17 @@ test("third level practices six divisibility rules after prime collection", () =
   assert.match(game, /請\$\{target\.menuHand === "left" \? "左手" : "右手"\}握拳展開術式/);
   assert.match(game, /if \(!target\.radarArmed\) \{[\s\S]*?return;/);
 });
+
+test("third level keeps its six divisibility choices close to the central target", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const latest = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(
+    game,
+    /MULTIPLE_RADAR_POSITIONS = \[\s*\{ x: 0\.36, y: 0\.3 \}, \{ x: 0\.5, y: 0\.3 \}, \{ x: 0\.64, y: 0\.3 \},\s*\{ x: 0\.36, y: 0\.7 \}, \{ x: 0\.5, y: 0\.7 \}, \{ x: 0\.64, y: 0\.7 \},/,
+  );
+});
