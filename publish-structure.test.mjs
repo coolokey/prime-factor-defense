@@ -438,7 +438,7 @@ test("second level composite hint is drawn below the selected number", () => {
   assert.match(game, /ctx\.translate\(x, y \+ 78\)/);
 });
 
-test("third final chapter appears as the next locked ending after prime collection", () => {
+test("third level practices six divisibility rules after prime collection", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const datedGames = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -446,8 +446,13 @@ test("third final chapter appears as the next locked ending after prime collecti
   const latest = datedGames.at(-1);
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
-  assert.match(game, /第三關：質數封印戰/);
-  assert.match(game, /完結篇即將開啟/);
-  assert.match(game, /前兩段挑戰已完成/);
-  assert.match(game, /overlay\.querySelector\("#startButton"\)\.textContent = "重新開始完整挑戰"/);
+  assert.match(game, /第三關：倍數雷達陣/);
+  assert.match(game, /MULTIPLE_RADAR_FACTORS = \[2, 3, 4, 5, 9, 11\]/);
+  assert.match(game, /MULTIPLE_RADAR_GOAL = 12/);
+  assert.match(game, /startMultipleRadar\(\)/);
+  assert.match(game, /spawnMultipleRadarTarget/);
+  assert.match(game, /answerMultipleRadar/);
+  assert.match(game, /isMultipleRadar/);
+  assert.match(game, /target\.factors\.includes\(factor\)/);
+  assert.match(game, /一題所有正確術式都要點亮/);
 });
