@@ -168,8 +168,8 @@ test("latest game joins all three levels into one complete challenge flow", () =
   const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
 
   assert.match(game, /數界試煉：質數守門/);
-  assert.match(game, /開始完整挑戰/);
-  assert.match(game, /startButton"\)\.addEventListener\("click", startPrimeReview\)/);
+  assert.match(game, /開始挑戰/);
+  assert.match(game, /startButton"\)\.addEventListener\("click", \(\) => openSettingsPanel\(\{ startAfterClose: true \}\)\)/);
   assert.match(game, /function completePrimeGate\(\)[\s\S]*?startSecondLevelPractice\(\)/);
   assert.match(game, /function completePrimeCollection\(\)[\s\S]*?startMultipleRadarPreview\(\)/);
   assert.match(game, /async function startMultipleRadarPreview\(\)/);
@@ -529,4 +529,24 @@ test("latest game grades challenge quality without harsh time pressure", () => {
   assert.match(game, /完成時間/);
   assert.match(game, /時間僅作參考/);
   assert.doesNotMatch(game, /完成時間.*鑽石級/s);
+});
+
+test("latest game opens settings before starting the challenge", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const latest = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /id="playerNameInput"/);
+  assert.match(game, /playerName:\s*"大貿險家"/);
+  assert.match(game, /pendingSettingsStart/);
+  assert.match(game, /function openSettingsPanel\(\{ startAfterClose = false \} = \{\}\)/);
+  assert.match(game, /openSettingsPanel\(\{ startAfterClose: true \}\)/);
+  assert.match(game, /closeSettingsPanel/);
+  assert.match(game, /startPrimeReview\(\)/);
+  assert.match(game, />開始挑戰<\/button>/);
+  assert.match(game, /完成並開始/);
+  assert.doesNotMatch(game, /開始完整挑戰/);
 });
