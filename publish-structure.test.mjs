@@ -470,4 +470,7 @@ test("third level practices six divisibility rules after prime collection", () =
   assert.match(game, /radarMenuHand/);
   assert.match(game, /target\.radarArmed/);
   assert.match(game, /請用另一隻手的食指選擇/);
+  assert.match(game, /menuHand: Math\.random\(\) < 0\.5 \? "left" : "right"/);
+  assert.match(game, /請\$\{target\.menuHand === "left" \? "左手" : "右手"\}握拳展開術式/);
+  assert.match(game, /if \(!target\.radarArmed\) \{[\s\S]*?return;/);
 });
