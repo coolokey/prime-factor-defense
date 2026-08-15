@@ -173,10 +173,13 @@ test("third level preview starts directly while retaining the complete challenge
   assert.match(game, /async function startMultipleRadarPreview\(\)/);
   assert.match(game, /thirdReviewOverlay/);
   assert.match(game, /第三關：倍數判別法確認/);
-  assert.match(game, /2：個位數是 0、2、4、6、8/);
-  assert.match(game, /11：奇數位數字和與偶數位數字和的差/);
+  assert.match(game, /2 的倍數/);
+  assert.match(game, /個位數是 0、2、4、6、8/);
+  assert.match(game, /11 的倍數/);
   assert.match(game, /thirdThinkReady/);
   assert.match(game, /thirdPointReady/);
+  assert.match(game, /用另一隻手伸出食指/);
+  assert.match(game, /divisibility-rules/);
   assert.match(game, /confirmMultipleRadarPreview/);
   assert.match(game, /已確認規則，開始倍數雷達挑戰/);
   assert.match(game, /state\.primeGateCorrect >= PRIME_GATE_GOAL\) completePrimeGate\(\)/);
@@ -464,4 +467,7 @@ test("third level practices six divisibility rules after prime collection", () =
   assert.match(game, /isMultipleRadar/);
   assert.match(game, /target\.factors\.includes\(factor\)/);
   assert.match(game, /一題所有正確術式都要點亮/);
+  assert.match(game, /radarMenuHand/);
+  assert.match(game, /target\.radarArmed/);
+  assert.match(game, /請用另一隻手的食指選擇/);
 });
