@@ -491,3 +491,18 @@ test("third level keeps its six divisibility choices close to the central target
     /MULTIPLE_RADAR_POSITIONS = \[\s*\{ x: 0\.36, y: 0\.3 \}, \{ x: 0\.5, y: 0\.3 \}, \{ x: 0\.64, y: 0\.3 \},\s*\{ x: 0\.36, y: 0\.7 \}, \{ x: 0\.5, y: 0\.7 \}, \{ x: 0\.64, y: 0\.7 \},/,
   );
 });
+
+test("third level shuffles its composite prompts for each new challenge", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const latest = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /const radarRounds = shuffle\(MULTIPLE_RADAR_ROUNDS\);/);
+  assert.match(game, /radarRounds,\s*lastRadarOpeningNumber: radarRounds\[0\]/);
+  assert.match(game, /state\.radarRounds\[state\.radarRoundIndex % state\.radarRounds\.length\]/);
+  assert.match(game, /if \(radarRounds\[0\] === state\.lastRadarOpeningNumber/);
+  assert.doesNotMatch(game, /MULTIPLE_RADAR_ROUNDS\[state\.radarRoundIndex/);
+});
