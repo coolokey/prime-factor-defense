@@ -178,7 +178,8 @@ test("third level preview starts directly while retaining the complete challenge
   assert.match(game, /11 的倍數/);
   assert.match(game, /thirdThinkReady/);
   assert.match(game, /thirdPointReady/);
-  assert.match(game, /用另一隻手伸出食指/);
+  assert.match(game, /雙手同時握拳/);
+  assert.match(game, /任一手伸出食指/);
   assert.match(game, /divisibility-rules/);
   assert.match(game, /confirmMultipleRadarPreview/);
   assert.match(game, /已確認規則，開始倍數雷達挑戰/);
@@ -469,9 +470,11 @@ test("third level practices six divisibility rules after prime collection", () =
   assert.match(game, /一題所有正確術式都要點亮/);
   assert.match(game, /radarMenuHand/);
   assert.match(game, /target\.radarArmed/);
-  assert.match(game, /請用另一隻手的食指選擇/);
-  assert.match(game, /menuHand: Math\.random\(\) < 0\.5 \? "left" : "right"/);
-  assert.match(game, /請\$\{target\.menuHand === "left" \? "左手" : "右手"\}握拳展開術式/);
+  assert.match(game, /雙手同時握拳開啟術式/);
+  assert.match(game, /gestures\.leftFist && gestures\.rightFist/);
+  assert.match(game, /請雙手同時握拳展開術式。/);
+  assert.match(game, /請伸出任一手的食指選擇所有成立的倍數。/);
+  assert.doesNotMatch(game, /menuHand: Math\.random\(\) < 0\.5 \? "left" : "right"/);
   assert.match(game, /if \(!target\.radarArmed\) \{[\s\S]*?return;/);
 });
 
