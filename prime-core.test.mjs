@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   applyFactorPair,
   factorize,
+  getQualityRank,
   getFactorPairs,
   getDifficultyPool,
   isPrime,
@@ -41,6 +42,29 @@ test("builds answer choices that include the correct factor and stay prime", () 
   assert.ok(choices.includes(13));
   assert.equal(new Set(choices).size, 4);
   assert.ok(choices.every(isPrime));
+});
+
+test("grades completion quality without making time the main penalty", () => {
+  assert.deepEqual(
+    getQualityRank({ completed: true, mistakes: 0, hintsUsed: 0, bestCombo: 8, elapsedSeconds: 120 }),
+    { id: "diamond", label: "鑽石級", tone: "perfect" },
+  );
+  assert.deepEqual(
+    getQualityRank({ completed: true, mistakes: 1, hintsUsed: 0, bestCombo: 5, elapsedSeconds: 180 }),
+    { id: "gold", label: "黃金級", tone: "excellent" },
+  );
+  assert.deepEqual(
+    getQualityRank({ completed: true, mistakes: 3, hintsUsed: 1, bestCombo: 2, elapsedSeconds: 90 }),
+    { id: "silver", label: "白銀級", tone: "steady" },
+  );
+  assert.deepEqual(
+    getQualityRank({ completed: true, mistakes: 5, hintsUsed: 2, bestCombo: 1, elapsedSeconds: 45 }),
+    { id: "bronze", label: "青銅級", tone: "complete" },
+  );
+  assert.deepEqual(
+    getQualityRank({ completed: false, mistakes: 0, hintsUsed: 0, bestCombo: 0, elapsedSeconds: 20 }),
+    { id: "novice", label: "見習級", tone: "retry" },
+  );
 });
 
 test("offers non-trivial factor pairs for a defensive factor tree", () => {

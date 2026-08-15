@@ -48,6 +48,26 @@ export function applyFactorPair(branches, branchId, pair) {
   });
 }
 
+export function getQualityRank({
+  completed,
+  mistakes = 0,
+  hintsUsed = 0,
+  bestCombo = 0,
+} = {}) {
+  if (!completed) return { id: "novice", label: "見習級", tone: "retry" };
+
+  if (mistakes === 0 && hintsUsed === 0 && bestCombo >= 5) {
+    return { id: "diamond", label: "鑽石級", tone: "perfect" };
+  }
+  if (mistakes <= 1 && hintsUsed <= 1) {
+    return { id: "gold", label: "黃金級", tone: "excellent" };
+  }
+  if (mistakes <= 3) {
+    return { id: "silver", label: "白銀級", tone: "steady" };
+  }
+  return { id: "bronze", label: "青銅級", tone: "complete" };
+}
+
 export function getDifficultyPool(level) {
   const maxByLevel = { easy: 30, normal: 60, challenge: 100 };
   const max = maxByLevel[level] ?? maxByLevel.normal;

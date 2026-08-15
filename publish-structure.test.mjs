@@ -508,3 +508,25 @@ test("third level shuffles its composite prompts for each new challenge", () => 
   assert.match(game, /if \(radarRounds\[0\] === state\.lastRadarOpeningNumber/);
   assert.doesNotMatch(game, /MULTIPLE_RADAR_ROUNDS\[state\.radarRoundIndex/);
 });
+
+test("latest game grades challenge quality without harsh time pressure", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const latest = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+
+  assert.match(game, /QUALITY_RANKS/);
+  assert.match(game, /qualityRankEl/);
+  assert.match(game, /bestCombo/);
+  assert.match(game, /mistakes/);
+  assert.match(game, /hintsUsed/);
+  assert.match(game, /startedAt/);
+  assert.match(game, /getQualityRank\(\{ completed/);
+  assert.match(game, /formatElapsedSeconds/);
+  assert.match(game, /階級/);
+  assert.match(game, /完成時間/);
+  assert.match(game, /時間僅作參考/);
+  assert.doesNotMatch(game, /完成時間.*鑽石級/s);
+});
