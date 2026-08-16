@@ -576,3 +576,19 @@ test("latest game can submit and read a Firebase Firestore leaderboard", () => {
   assert.match(game, /查看排行榜/);
   assert.match(game, /Firebase 設定/);
 });
+
+test("latest first level balances prime and non-prime prompts", () => {
+  const files = readdirSync(new URL(".", import.meta.url));
+  const latest = files
+    .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
+    .sort()
+    .at(-1);
+  const game = readFileSync(new URL(`./${latest}`, import.meta.url), "utf8");
+  const spawnTarget = game.match(/function spawnTarget\(\) \{[\s\S]*?addRing\(AURORA\.leftHand, 1\);[\s\S]*?\}/)?.[0] || "";
+
+  assert.match(game, /getPrimeGatePromptPool/);
+  assert.match(spawnTarget, /const pool = getPrimeGatePromptPool\(\)/);
+  assert.match(game, /state\.primeGateCorrect % 2 === 0/);
+  assert.match(game, /質數 5 題、非質數 5 題/);
+  assert.doesNotMatch(spawnTarget, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
+});
