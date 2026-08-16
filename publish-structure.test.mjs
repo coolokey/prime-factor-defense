@@ -577,7 +577,7 @@ test("latest game can submit and read a Firebase Firestore leaderboard", () => {
   assert.match(game, /Firebase 設定/);
 });
 
-test("latest first level balances prime and non-prime prompts", () => {
+test("latest first level randomizes prime and non-prime prompts while keeping quotas", () => {
   const files = readdirSync(new URL(".", import.meta.url));
   const latest = files
     .filter((file) => /^prime-factor-defense-\d{8}-\d{6}\.html$/.test(file))
@@ -588,7 +588,11 @@ test("latest first level balances prime and non-prime prompts", () => {
 
   assert.match(game, /getPrimeGatePromptPool/);
   assert.match(spawnTarget, /const pool = getPrimeGatePromptPool\(\)/);
-  assert.match(game, /state\.primeGateCorrect % 2 === 0/);
+  assert.match(game, /PRIME_GATE_TYPE_GOAL = PRIME_GATE_GOAL \/ 2/);
+  assert.match(game, /primeGatePrimeCorrect/);
+  assert.match(game, /primeGateNonPrimeCorrect/);
+  assert.match(game, /Math\.random\(\) < 0\.5/);
+  assert.doesNotMatch(game, /state\.primeGateCorrect % 2 === 0/);
   assert.match(game, /質數 5 題、非質數 5 題/);
   assert.doesNotMatch(spawnTarget, /Array\.from\(\{ length: 100 \}, \(_, index\) => index \+ 1\)/);
 });
